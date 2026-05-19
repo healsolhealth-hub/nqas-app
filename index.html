@@ -1198,7 +1198,8 @@ function launchConfetti(){
 // ══════════════════════════════════════════════════════════════
 function computeCurrentDay(startDateStr, totalDays){
   if(!startDateStr) return 1;
-  const start=new Date(startDateStr);
+  const p=startDateStr.split('-');
+  const start=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
   const today=new Date();
   start.setHours(0,0,0,0); today.setHours(0,0,0,0);
   const diff=Math.floor((today-start)/(1000*60*60*24));
@@ -1671,6 +1672,7 @@ async function startCHOApp(){
   appMode='cho';
   $('login-screen').style.display='none';
   $('cho-app').classList.add('vis');
+  try{ localStorage.setItem('nqas_last_prog', choState.progId); }catch(e){}
   loadCHOState();
   // Pull published config + edits + start date from Firebase
   try{
@@ -1717,6 +1719,7 @@ function completeFacilitySetup(){
   choState.setupDone=true;
   updateCurrentDay();
   saveCHOState();
+  try{ localStorage.setItem('nqas_last_prog', choState.progId); }catch(e){}
   $('setup-screen').style.display='none';
   showWelcomeScreen();
 }
@@ -1746,8 +1749,12 @@ function updateCHOUI(){
 
 function logoutCHO(){
   if(!confirm('Logout and return to login screen?')) return;
+  // Clear auto-login on explicit logout
+  try{ localStorage.removeItem('nqas_last_prog'); }catch(e){}
+  $('welcome-screen').classList.remove('vis');
   $('cho-app').classList.remove('vis');
-  $('cho-nav').style.display='none';$('cho-main').style.display='none';
+  $('cho-nav').style.display='none';
+  $('cho-main').style.display='none';
   $('login-screen').style.display='';
   adminEdits={};
 }
@@ -2452,9 +2459,55 @@ function wsUpgradeTo(newProgId){
 // INIT
 // ══════════════════════════════════════════════════════════════
 window.addEventListener('load',function(){
+
+  // AUTO-LOGIN: same device, skip login if session exists
+  try{
+    const lastProg = localStorage.getItem('nqas_last_prog');
+    if(lastProg){
+      const saved = localStorage.getItem(PROGRESS_KEY + '_' + lastProg);
+      if(saved){
+        const state = JSON.parse(saved);
+        if(state && state.setupDone){
+          choState.progId = lastProg;
+          Object.assign(choState, state);
+          updateCurrentDay();
+          $('login-screen').style.display = 'none';
+          $('cho-app').classList.add('vis');
+          initFirebase();
+          setTimeout(async function(){
+            try{
+              const re = await storage.get(editKey(choState.progId), true);
+              if(re && re.value) adminEdits = JSON.parse(re.value);
+            }catch(e){}
+          }, 500);
+          showWelcomeScreen();
+          return;
+        }
+      }
+    }
+  }catch(e){}
+
+  // Normal login flow
   buildStaffProgSelector();
-  const urlProg=getProgFromURL();
-  if(urlProg){selectedStaffProg=urlProg;selectStaffProg(urlProg);}
+  const selGrid = $('staff-prog-selector');
+  if(selGrid) selGrid.style.display = 'grid';
+  const urlProg = getProgFromURL();
+  if(urlProg){
+    selectedStaffProg = urlProg;
+    selectStaffProg(urlProg);
+    const sel = $('staff-prog-selector');
+    if(sel) sel.style.display = 'none';
+    const p = PROGRAMS.find(x=>x.id===urlProg);
+    const badge = $('staff-prog-badge-url');
+    if(badge && p){
+      badge.style.display = '';
+      $('spb-icon').textContent = p.icon;
+      $('spb-name').textContent = p.name;
+      $('spb-tag').textContent = p.desc + ' - ' + p.days + '-day programme';
+    }
+    const sub = document.querySelector('#staff-panel .lc-sub');
+    if(sub) sub.textContent = 'Enter your facility code to begin.';
+  }
   initFirebase();
 });
 
