@@ -666,6 +666,20 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
 .card { position: relative; }
 .cbody { position: relative; z-index: 1; }
 
+
+/* CUSTOM CONFIRM MODAL */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9990;display:none;align-items:center;justify-content:center;padding:20px;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:#fff;border-radius:20px;padding:24px 20px;width:100%;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.2);text-align:center;}
+.confirm-icon{font-size:36px;margin-bottom:10px;}
+.confirm-title{font-size:16px;font-weight:800;color:var(--t1);margin-bottom:6px;font-family:'Poppins',sans-serif;}
+.confirm-msg{font-size:13px;color:var(--t3);font-weight:600;line-height:1.5;margin-bottom:20px;}
+.confirm-btns{display:flex;gap:10px;}
+.confirm-cancel{flex:1;padding:12px;border:1.5px solid var(--br);border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;background:transparent;color:var(--t2);transition:all 0.15s;}
+.confirm-cancel:hover{background:var(--bgs);}
+.confirm-ok{flex:1;padding:12px;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;background:var(--red);color:#fff;transition:all 0.15s;}
+.confirm-ok:hover{background:var(--red-dk);}
+
 </style>
 </head>
 <body>
@@ -1063,6 +1077,20 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
 </div>
 
 
+
+<!-- CUSTOM CONFIRM MODAL -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="confirm-icon">🔒</div>
+    <div class="confirm-title" id="confirm-title">Logout</div>
+    <div class="confirm-msg" id="confirm-msg">Logout and return to login screen?</div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="confirmResolve(false)">Cancel</button>
+      <button class="confirm-ok" id="confirm-ok-btn" onclick="confirmResolve(true)">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- PRIVACY OVERLAY -->
 <div id="privacy-overlay" style="display:none;position:fixed;inset:0;background:var(--teal-dk);z-index:9999;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;">
   <div style="font-size:52px;margin-bottom:16px;">🔒</div>
@@ -1383,8 +1411,9 @@ async function startAdminApp(){
   await adminSelectProg(PROGRAMS[0].id);
   await fcInit();
 }
-function logoutAdmin(){
-  if(!confirm('Logout of admin?')) return;
+async function logoutAdmin(){
+  const ok = await showConfirm('Logout of admin panel?','🔐','Admin Logout','Logout','var(--teal)');
+  if(!ok) return;
   $('admin-app').classList.remove('vis');
   $('login-screen').style.display='';
   adminActiveProg=null;adminEdits={};adminEditorDay=null;
@@ -1519,7 +1548,8 @@ function aeAddCP(){
   if(!adminEdits[di])adminEdits[di]={};adminEdits[di].cps=cps;aeRenderCPs(di);
 }
 async function aeDeleteCP(ci){
-  if(!confirm('Remove checkpoint '+(ci+1)+'?')) return;
+  const ok = await showConfirm('Remove checkpoint '+(ci+1)+'?','🗑️','Delete Checkpoint','Delete','var(--red)');
+  if(!ok) return;
   const di=adminEditorDay;const d=aeGetDay(di);const edit=adminEdits[di]||{};
   const cps=JSON.parse(JSON.stringify(edit.cps||d.cps||[]));
   cps.splice(ci,1);
@@ -1557,11 +1587,12 @@ function aeSaveDay(){
   tag.textContent=adminEdits[di]?'✏️ Edited':'Original';
   showToast('Card saved — Publish when ready','ok');
 }
-function aeResetDay(){
+async function aeResetDay(){
   if(adminEditorDay===null) return;
   const di=adminEditorDay;
   if(!adminEdits[di]){showToast('No edits to reset — card already original.');return;}
-  if(!confirm('Reset Day '+(di+1)+' to original content?')) return;
+  const ok = await showConfirm('Reset Day '+(di+1)+' to original content?','🔄','Reset Card','Reset','var(--red)');
+  if(!ok) return;
   delete adminEdits[di];
   try{localStorage.setItem(editKey(adminActiveProg.id),JSON.stringify(adminEdits));}catch(e){}
   aeOpenDay(di);buildAeDayStrip();showToast('Card reset to original.');
@@ -1652,7 +1683,9 @@ async function fcAddCode(){
   fcRenderList();
 }
 async function fcDeleteCode(idx){
-  if(!confirm('Remove code "'+(facilityCodes[fcActiveProg]||[])[idx]?.code+'"?')) return;
+  const codeVal = (facilityCodes[fcActiveProg]||[])[idx]?.code||'this code';
+  const ok = await showConfirm('Remove facility code "'+codeVal+'"?','🗑️','Remove Code','Remove','var(--red)');
+  if(!ok) return;
   const codes=facilityCodes[fcActiveProg]||[];codes.splice(idx,1);
   const val=JSON.stringify(codes);
   try{localStorage.setItem('sh_'+codesKey(fcActiveProg),val);}catch(e){}
@@ -1788,8 +1821,9 @@ function updateCHOUI(){
   $('fac-day-info').textContent='Started: '+formatDate(choState.startDate)+' · Day '+choState.currentDay+' of '+prog.days;
 }
 
-function logoutCHO(){
-  if(!confirm('Logout and return to login screen?')) return;
+async function logoutCHO(){
+  const ok = await showConfirm('Logout and return to login screen?','👋','Logout','Logout','var(--teal)');
+  if(!ok) return;
   try{ localStorage.removeItem('nqas_last_prog'); }catch(e){}
   $('welcome-screen').classList.remove('vis');
   $('cho-app').classList.remove('vis');
@@ -2050,7 +2084,9 @@ function saveComment(di){
   c.commentDate=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
   saveCHOState();showToast('Comment saved','ok');
 }
-function resetCard(di){
+async function resetCard(di){
+  const ok = await showConfirm('Reset this card? Scores and verification will be cleared.','🔄','Reset Card','Reset','var(--red)');
+  if(!ok) return;
   const c=getCHOCard(di);c.taskDone=false;c.verified=false;
   c.cpScores=new Array(getDay(di).cps.length).fill(null);c.score=null;c.gapRetries={};
   if(choState.streak>0)choState.streak--;saveCHOState();buildDaySelector();renderCard(di);
@@ -2481,8 +2517,9 @@ function wsViewResults(){
   showCHOMain();
   setTimeout(function(){ switchView('board'); }, 100);
 }
-function wsUpgradeTo(newProgId){
-  if(!confirm('Upgrade to ' + getProg(newProgId).name + '? Your current progress is saved separately.')) return;
+async function wsUpgradeTo(newProgId){
+  const ok = await showConfirm('Upgrade to '+getProg(newProgId).name+'? Your current progress is saved separately.','⬆️','Upgrade Programme','Upgrade','var(--teal)');
+  if(!ok) return;
   choState.progId = newProgId;
   choState.setupDone = false;
   choState.cards = {};
@@ -2552,6 +2589,25 @@ window.addEventListener('load',function(){
   initFirebase();
 });
 
+
+
+// CUSTOM CONFIRM DIALOG
+let confirmCallback = null;
+function showConfirm(msg, icon='🔒', title='Logout', okLabel='OK', okColor='var(--red)'){
+  return new Promise(resolve => {
+    confirmCallback = resolve;
+    $('confirm-msg').textContent = msg;
+    $('confirm-icon').textContent = icon;
+    $('confirm-title').textContent = title;
+    $('confirm-ok-btn').textContent = okLabel;
+    $('confirm-ok-btn').style.background = okColor;
+    $('confirm-overlay').classList.add('open');
+  });
+}
+function confirmResolve(result){
+  $('confirm-overlay').classList.remove('open');
+  if(confirmCallback){ confirmCallback(result); confirmCallback = null; }
+}
 
 // ANTI-COPY PROTECTION
 document.addEventListener('contextmenu', function(e){
