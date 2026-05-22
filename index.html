@@ -1549,6 +1549,8 @@ async function scStaffLogin(){
     choState.facility.district = facData.district || '';
     choState.facility.state    = facData.state || '';
     if(facData.startDate) choState.startDate = facData.startDate;
+    // Mark setup done — all facility data loaded from Firebase
+    choState.setupDone = true;
     try{ localStorage.setItem('sc_autologin', JSON.stringify({fid, mob, pwd})); }catch(e){}
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-rocket" style="font-size:15px;"></i> Enter SC App';}
     await scStartApp();
@@ -1627,8 +1629,8 @@ window.addEventListener('load', async function(){
           choState.facility.district = facData.district||'';
           choState.facility.state    = facData.state||'';
           if(facData.startDate) choState.startDate = facData.startDate;
-          loadChoState();
           await scStartApp();
+            choState.setupDone = true;
           return;
         }catch(e){
           localStorage.removeItem('sc_autologin');
@@ -1644,14 +1646,37 @@ async function scStartApp(){
   appMode='cho';
   document.getElementById('login-screen').style.display='none';
   document.getElementById('cho-app').classList.add('vis');
-  loadChoState();
+  // Load state using mobile-based key
+  scLoadState();
   if(!choState.setupDone){
-    scShowSetup();
+    // Show setup screen
+    $('setup-screen').style.display='flex';
   } else {
     updateCurrentDay();
     showWelcomeScreen();
   }
 }
+
+// Load/save state using mobile number as unique key
+function scLoadState(){
+  try{
+    const key = getChoStateKey();
+    const r = localStorage.getItem(key);
+    if(r){ const s=JSON.parse(r); Object.assign(choState,s); }
+    else {
+      // Try old key format for backwards compatibility
+      const oldKey = PROGRESS_KEY+'_'+choState.progId;
+      const r2 = localStorage.getItem(oldKey);
+      if(r2){ const s=JSON.parse(r2); Object.assign(choState,s); }
+    }
+  }catch(e){}
+}
+function scSaveState(){
+  try{ localStorage.setItem(getChoStateKey(), JSON.stringify(choState)); }catch(e){}
+}
+// Aliases so old code still works
+function loadChoState(){ scLoadState(); }
+function scShowSetup(){ $('setup-screen').style.display='flex'; }
 
 // ── Progress sync to Firebase ──────────────────────────────────
 async function scSyncProgress(di){
@@ -2608,7 +2633,11 @@ function loadCHOState(){
   try{const r=localStorage.getItem(PROGRESS_KEY+'_'+choState.progId);if(r){const s=JSON.parse(r);Object.assign(choState,s);}}catch(e){}
 }
 function saveCHOState(){
-  try{localStorage.setItem(PROGRESS_KEY+'_'+choState.progId,JSON.stringify(choState));}catch(e){}
+  try{
+    // Save with both old key (for compatibility) and new mobile key
+    localStorage.setItem(PROGRESS_KEY+'_'+choState.progId,JSON.stringify(choState));
+    if(choState.staffMobile) localStorage.setItem(getChoStateKey(),JSON.stringify(choState));
+  }catch(e){}
 }
 function getCHOCard(di){
   const arr=getDaysArr(choState.progId);
