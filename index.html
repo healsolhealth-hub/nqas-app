@@ -1646,13 +1646,16 @@ async function scStartApp(){
   appMode='cho';
   document.getElementById('login-screen').style.display='none';
   document.getElementById('cho-app').classList.add('vis');
-  // Load state using mobile-based key
+  // Load state using mobile-based key (Firebase values preserved inside)
   scLoadState();
+  // Always recalculate day from Firebase start date — never use cached day
+  if(choState.startDate){
+    const prog = getProg(choState.progId);
+    choState.currentDay = computeCurrentDay(choState.startDate, prog ? prog.days : 30);
+  }
   if(!choState.setupDone){
-    // Show setup screen
     $('setup-screen').style.display='flex';
   } else {
-    updateCurrentDay();
     showWelcomeScreen();
   }
 }
@@ -1662,14 +1665,35 @@ function scLoadState(){
   try{
     const key = getChoStateKey();
     const r = localStorage.getItem(key);
-    if(r){ const s=JSON.parse(r); Object.assign(choState,s); }
-    else {
-      // Try old key format for backwards compatibility
-      const oldKey = PROGRESS_KEY+'_'+choState.progId;
-      const r2 = localStorage.getItem(oldKey);
-      if(r2){ const s=JSON.parse(r2); Object.assign(choState,s); }
+    if(r){
+      const s = JSON.parse(r);
+      // Preserve Firebase-loaded values — never let cached state override them
+      const keepFacilityCode = choState.facilityCode;
+      const keepRoleId       = choState.roleId;
+      const keepStaffName    = choState.staffName;
+      const keepStaffMobile  = choState.staffMobile;
+      const keepStartDate    = choState.startDate;
+      const keepProgId       = choState.progId;
+      const keepFacility     = choState.facility;
+      const keepSetupDone    = choState.setupDone;
+      Object.assign(choState, s);
+      // Restore Firebase values — these always win
+      choState.facilityCode = keepFacilityCode;
+      choState.roleId       = keepRoleId;
+      choState.staffName    = keepStaffName;
+      choState.staffMobile  = keepStaffMobile;
+      choState.startDate    = keepStartDate;
+      choState.progId       = keepProgId;
+      choState.facility     = keepFacility;
+      choState.setupDone    = keepSetupDone;
     }
+    // NO fallback to old shared key — that would load another user's data
   }catch(e){}
+  // Always recalculate currentDay from startDate after loading
+  if(choState.startDate){
+    const prog = getProg(choState.progId);
+    choState.currentDay = computeCurrentDay(choState.startDate, prog ? prog.days : 30);
+  }
 }
 function scSaveState(){
   try{ localStorage.setItem(getChoStateKey(), JSON.stringify(choState)); }catch(e){}
@@ -2634,9 +2658,9 @@ function loadCHOState(){
 }
 function saveCHOState(){
   try{
-    // Save with both old key (for compatibility) and new mobile key
-    localStorage.setItem(PROGRESS_KEY+'_'+choState.progId,JSON.stringify(choState));
-    if(choState.staffMobile) localStorage.setItem(getChoStateKey(),JSON.stringify(choState));
+    // Save ONLY with mobile-based key — never overwrite shared old key
+    const key = getChoStateKey();
+    localStorage.setItem(key, JSON.stringify(choState));
   }catch(e){}
 }
 function getCHOCard(di){
