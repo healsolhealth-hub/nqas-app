@@ -1653,9 +1653,12 @@ async function scStartApp(){
     const prog = getProg(choState.progId);
     choState.currentDay = computeCurrentDay(choState.startDate, prog ? prog.days : 30);
   }
-  if(!choState.setupDone){
+  // Staff logged in via Firebase — facility is always set up
+  // Setup screen is only for the old direct-code login flow
+  if(!choState.staffMobile && !choState.setupDone){
     $('setup-screen').style.display='flex';
   } else {
+    choState.setupDone = true;
     showWelcomeScreen();
   }
 }
@@ -1667,29 +1670,16 @@ function scLoadState(){
     const r = localStorage.getItem(key);
     if(r){
       const s = JSON.parse(r);
-      // Preserve Firebase-loaded values — never let cached state override them
-      const keepFacilityCode = choState.facilityCode;
-      const keepRoleId       = choState.roleId;
-      const keepStaffName    = choState.staffName;
-      const keepStaffMobile  = choState.staffMobile;
-      const keepStartDate    = choState.startDate;
-      const keepProgId       = choState.progId;
-      const keepFacility     = choState.facility;
-      const keepSetupDone    = choState.setupDone;
-      Object.assign(choState, s);
-      // Restore Firebase values — these always win
-      choState.facilityCode = keepFacilityCode;
-      choState.roleId       = keepRoleId;
-      choState.staffName    = keepStaffName;
-      choState.staffMobile  = keepStaffMobile;
-      choState.startDate    = keepStartDate;
-      choState.progId       = keepProgId;
-      choState.facility     = keepFacility;
-      choState.setupDone    = keepSetupDone;
+      // Only restore cards, streak, questTab from cache
+      // ALL identity/facility/date fields come from Firebase — always
+      if(s.cards)        choState.cards     = s.cards;
+      if(s.streak)       choState.streak    = s.streak;
+      if(s.questTab)     choState.questTab  = s.questTab;
+      if(s.view)         choState.view      = s.view;
     }
-    // NO fallback to old shared key — that would load another user's data
+    // NO fallback to old shared key — prevents cross-user contamination
   }catch(e){}
-  // Always recalculate currentDay from startDate after loading
+  // Always recalculate currentDay from Firebase startDate
   if(choState.startDate){
     const prog = getProg(choState.progId);
     choState.currentDay = computeCurrentDay(choState.startDate, prog ? prog.days : 30);
