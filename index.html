@@ -917,6 +917,24 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
   font-weight:800;cursor:pointer;font-family:inherit;
 }
 
+
+/* ── Admin Card Editor ─────────────────── */
+.ae-day-btn{
+  min-width:36px;height:36px;border-radius:9px;
+  border:1.5px solid var(--br);background:var(--bgs);
+  color:var(--t2);font-size:11px;font-weight:800;
+  cursor:pointer;font-family:inherit;transition:all 0.12s;
+}
+.ae-day-btn.active{
+  background:var(--green);color:#fff;border-color:var(--green);
+}
+.ae-day-btn.edited{
+  border-color:var(--org,#F59E0B);color:var(--org,#F59E0B);
+}
+.ae-day-btn.active.edited{
+  background:var(--org,#F59E0B);color:#fff;border-color:var(--org,#F59E0B);
+}
+
 </style>
 </head>
 <body>
@@ -932,7 +950,11 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
         <div class="login-brand-sub">NQAS MasterClass FAST · SC</div>
       </div>
     </div>
-    <div style="display:flex;gap:8px;flex-shrink:0;">
+    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+      <div style="display:flex;background:rgba(255,255,255,0.1);border-radius:20px;padding:3px;gap:2px;">
+        <button id="lang-en-btn" onclick="setLang('en')" style="background:rgba(255,255,255,0.9);color:#1E6B5E;border:none;border-radius:16px;padding:4px 10px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">EN</button>
+        <button id="lang-hi-btn" onclick="setLang('hi')" style="background:transparent;color:rgba(255,255,255,0.8);border:none;border-radius:16px;padding:4px 10px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;">हिं</button>
+      </div>
       <button onclick="scShowChoLogin()" title="Facility Admin Login"
         style="width:38px;height:38px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;"
         onmouseover="this.style.background='rgba(255,255,255,0.25)'"
@@ -950,7 +972,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
 
   <!-- STAFF LOGIN (default, full card) -->
   <div class="login-card" id="sc-staff-panel">
-    <div class="lc-title">Staff Login</div>
+    <div class="lc-title" data-i18n="Staff Login">Staff Login</div>
     <div class="lc-sub">Login with your Facility ID, mobile number and password.</div>
     <div class="lc-field">
       <label class="lc-label">Facility ID</label>
@@ -1186,10 +1208,58 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="admin-badge"><i class="ti ti-shield-lock" style="font-size:11px;"></i> Admin</div>
+      <button onclick="toggleAdminEditor()" style="background:rgba(255,255,255,0.12);color:#fff;border:1.5px solid rgba(255,255,255,0.2);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;"><span>✏️</span> Edit Cards</button>
       <button class="switch-btn" onclick="logoutAdmin()"><i class="ti ti-logout" style="font-size:12px;"></i> Logout</button>
     </div>
   </div>
   <div class="admin-main">
+
+    <!-- ══ Admin Card Editor Panel ══════════════════ -->
+    <div id="admin-editor-section" style="display:none;background:#fff;border-radius:18px;border:1px solid #E2E8F0;overflow:hidden;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+      <!-- Header -->
+      <div style="background:var(--teal,#1E6B5E);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:15px;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;">✏️ Card Editor</span>
+          <span id="ae-edit-count" style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;">0 cards edited</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="aeSaveDay()" style="background:#10B981;color:#fff;border:none;border-radius:18px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">💾 Save Card</button>
+          <button onclick="aeResetDay()" style="background:#EF4444;color:#fff;border:none;border-radius:18px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;">↺ Reset</button>
+          <button onclick="toggleAdminEditor()" style="background:rgba(255,255,255,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.3);border-radius:18px;padding:8px 18px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;pointer-events:all;position:relative;z-index:10;">✕ Close</button>
+        </div>
+      </div>
+      <!-- Track/Programme selector -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid #E2E8F0;background:#F8FAFC;">
+        <span style="font-size:10px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;">Programme:</span>
+        <div id="ae-prog-sel-row" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- Day strip -->
+      <div style="border-bottom:1px solid #E2E8F0;background:#F8FAFC;">
+        <div id="ae-day-strip" style="display:flex;flex-wrap:wrap;gap:5px;padding:10px 16px;max-height:130px;overflow-y:auto;"></div>
+      </div>
+      <!-- Editor panel — shown after selecting a day -->
+      <div id="ae-editor-panel" style="display:none;padding:16px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <div id="ae-day-module" style="background:#ECFDF5;color:#065F46;border-radius:8px;padding:4px 11px;font-size:11px;font-weight:800;"></div>
+          <div id="ae-day-prog" style="background:#F8FAFC;color:#94A3B8;border-radius:8px;padding:4px 11px;font-size:11px;font-weight:700;"></div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Card Title</label>
+          <input id="ae-day-title" type="text" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;color:#0F172A;"/>
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="font-size:10px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Task / Description</label>
+          <textarea id="ae-day-task" rows="3" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:8px 12px;font-size:12px;font-family:inherit;color:#0F172A;resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <label style="font-size:10px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;">Checkpoints</label>
+          <button onclick="aeAddCP()" style="background:var(--teal,#1E6B5E);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;">+ Add Checkpoint</button>
+        </div>
+        <div id="ae-cp-list" style="max-height:420px;overflow-y:auto;"></div>
+      </div>
+    </div>
+    <!-- ══════════════════════════════════════════════ -->
+
     <div style="font-size:20px;font-weight:900;color:var(--t1);margin-bottom:3px;font-family:'Poppins',sans-serif;">HealSol Master Dashboard — SC</div>
     <div style="font-size:12px;color:var(--t3);margin-bottom:16px;">All enrolled Sub-Centre facilities · readiness · staff · reports</div>
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
@@ -1203,9 +1273,9 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
       </div>
     </div>
     <div class="sc-report-bar">
-      <button class="sc-report-btn" onclick="scGenerateReport('facility','')"><i class="ti ti-building-hospital"></i> Facility Report</button>
-      <button class="sc-report-btn" onclick="scGenerateReport('role','')"><i class="ti ti-users"></i> Role Report</button>
-      <button class="sc-report-btn" onclick="scGenerateReport('prog','')"><i class="ti ti-layout-grid"></i> Programme Report</button>
+      <button class="sc-report-btn" onclick="openReportModal('facility')"><i class="ti ti-building-hospital"></i> Facility Report</button>
+      <button class="sc-report-btn" onclick="openReportModal('role')"><i class="ti ti-users"></i> Role Report</button>
+      <button class="sc-report-btn" onclick="openReportModal('prog')"><i class="ti ti-layout-grid"></i> Programme Report</button>
       <button class="sc-report-btn" style="border-color:var(--t3);color:var(--t3);" onclick="scLoadMasterData().then(scRenderMasterDashboard)"><i class="ti ti-refresh"></i> Refresh</button>
     </div>
     <button id="sc-master-back" onclick="scDrillBack()" style="display:none;border:1.5px solid var(--br);border-radius:20px;padding:7px 16px;font-size:11px;font-weight:800;cursor:pointer;background:transparent;color:var(--t2);font-family:inherit;margin-bottom:12px;"><i class="ti ti-arrow-left" style="font-size:12px;"></i> All Facilities</button>
@@ -1659,7 +1729,12 @@ async function scStartApp(){
     $('setup-screen').style.display='flex';
   } else {
     choState.setupDone = true;
-    showWelcomeScreen();
+    // Load any admin edits from localStorage
+  try{
+    var _savedEdits = localStorage.getItem('adminEdits_v2');
+    if(_savedEdits && typeof adminEdits !== 'undefined') adminEdits = JSON.parse(_savedEdits);
+  }catch(e){}
+  showWelcomeScreen();
   }
 }
 
@@ -2172,7 +2247,17 @@ async function scGenerateReport(type,code){
     const col=pct>=80?'#22C55E':pct>=70?'#1E6B5E':pct>=50?'#F59E0B':'#EF4444';
     html+=`<tr><td><strong>${fac.name||code}</strong><br><span style="font-size:10px;color:#666;">${[fac.district,fac.state].filter(Boolean).join(', ')}</span></td><td>${fac.progId||'—'}</td><td>${fac.choName||'—'}</td><td>${Object.keys(staff).length}</td><td>${tv}/${tt}</td><td style="color:${col};font-weight:800;">${pct}%</td></tr>`;
   });
-  html+=`</table><div class="footer">HealSol Academy · NQAS MasterClass FAST · Sub-Centre · ${now}</div></body></html>`;
+  html+=`</table><div class="footer">HealSol Academy · NQAS MasterClass FAST · Sub-Centre · ${now}</div>
+<style>
+.rpt-filter-btn{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid var(--br);background:var(--bgc);color:var(--t3);cursor:pointer;font-family:inherit;transition:all 0.12s;}
+.rpt-filter-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+</style>
+
+
+<!-- ══ Report Filter Modal (SC style) ══════════════════════ -->
+
+
+</body></html>`;
   const win=window.open('','_blank');win.document.write(html);win.document.close();setTimeout(()=>win.print(),500);
 }
 
@@ -2189,6 +2274,267 @@ function scSetupShowFacSetup(){
 }
 
 
+
+// ══════════════════════════════════════════════════════════════
+// REPORT FILTER MODAL
+// ══════════════════════════════════════════════════════════════
+var _rptType = 'facility';
+var _rptProg = '';
+var _rptRole = '';
+
+function openReportModal(type){
+  try{
+  _rptType = type;
+  _rptProg = '';
+  _rptRole = '';
+  var modal = document.getElementById('rpt-filter-modal');
+  if(!modal){ alert('Modal not found in DOM'); return; }
+  modal.classList.add('open');
+
+  // Set title
+  var titles = {facility:'📊 Facility Report',role:'👤 Role-wise Report',prog:'📋 Programme Report'};
+  document.getElementById('rpt-title').textContent = titles[type] || 'Report';
+
+  // Show/hide role row
+  document.getElementById('rpt-role-row').style.display = type==='role' ? '' : 'none';
+
+  // Populate facility checkboxes
+  var list = document.getElementById('rpt-fac-list');
+  list.innerHTML = '';
+  Object.entries(scMasterFacilities||{}).forEach(function(entry){
+    var code=entry[0], fac=entry[1];
+    if(!fac) return;
+    var label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#374151;cursor:pointer;padding:3px 0;';
+    var cb = document.createElement('input');
+    cb.type='checkbox'; cb.value=code; cb.checked=true;
+    cb.style.cssText = 'width:14px;height:14px;accent-color:#1E6B5E;cursor:pointer;';
+    cb.addEventListener('change', rptUpdatePreview);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode((fac.name||code)+' · '+(fac.progId||'—')));
+    list.appendChild(label);
+  });
+
+  // Reset prog/role buttons
+  document.querySelectorAll('.rpt-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  var allBtn = document.querySelector('#rpt-prog-btns .rpt-filter-btn');
+  if(allBtn) allBtn.classList.add('active');
+  var allRoleBtn = document.querySelector('#rpt-role-btns .rpt-filter-btn');
+  if(allRoleBtn) allRoleBtn.classList.add('active');
+
+  // Set today's date as default
+  var today = new Date().toISOString().split('T')[0];
+  var fromEl = document.getElementById('rpt-date-from');
+  var toEl   = document.getElementById('rpt-date-to');
+  if(toEl) toEl.value = today;
+
+  rptUpdatePreview();
+  }catch(e){ alert('openReportModal error: '+e.message); }
+}
+
+function closeReportModal(){
+  document.getElementById('rpt-filter-modal').classList.remove('open');
+}
+
+function rptSelectAllFacs(val){
+  document.querySelectorAll('#rpt-fac-list input[type=checkbox]').forEach(function(cb){
+    cb.checked = val;
+  });
+  rptUpdatePreview();
+}
+
+function rptToggleProg(btn, prog){
+  _rptProg = prog;
+  document.querySelectorAll('#rpt-prog-btns .rpt-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  rptUpdatePreview();
+}
+
+function rptToggleRole(btn, role){
+  _rptRole = role;
+  document.querySelectorAll('#rpt-role-btns .rpt-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  rptUpdatePreview();
+}
+
+function rptGetSelectedFacs(){
+  var selected = [];
+  document.querySelectorAll('#rpt-fac-list input[type=checkbox]').forEach(function(cb){
+    if(cb.checked) selected.push(cb.value);
+  });
+  return selected;
+}
+
+function rptUpdatePreview(){
+  var selected = rptGetSelectedFacs();
+  var progFilter = _rptProg;
+  var roleFilter = _rptRole;
+  var filtered = selected.filter(function(code){
+    var fac = (scMasterFacilities||{})[code];
+    if(!fac) return false;
+    if(progFilter && fac.progId !== progFilter) return false;
+    return true;
+  });
+  var totalStaff = 0;
+  filtered.forEach(function(code){
+    var fac = (scMasterFacilities||{})[code]||{};
+    var staff = fac.staff||{};
+    if(roleFilter){
+      totalStaff += Object.values(staff).filter(function(s){ return s.role===roleFilter; }).length;
+    } else {
+      totalStaff += Object.keys(staff).length;
+    }
+  });
+  var prev = document.getElementById('rpt-preview');
+  if(prev){
+    prev.innerHTML = '<strong>Will include:</strong> '
+      + '<span style="color:#1E6B5E;font-weight:800;">'+filtered.length+' facilities</span>'
+      + (roleFilter?' · <span style="color:#1E6B5E;font-weight:800;">'+roleFilter+' role only</span>':'')
+      + (progFilter?' · <span style="color:#1E6B5E;font-weight:800;">'+progFilter+' only</span>':'')
+      + ' · <span style="color:#1E6B5E;font-weight:800;">'+totalStaff+' staff members</span>';
+  }
+}
+
+function rptGenerate(action){
+  var selected = rptGetSelectedFacs();
+  var progFilter = _rptProg;
+  var roleFilter = _rptRole;
+  var filtered = {};
+  selected.forEach(function(code){
+    var fac = (scMasterFacilities||{})[code];
+    if(!fac) return;
+    if(progFilter && fac.progId !== progFilter) return;
+    filtered[code] = fac;
+  });
+
+  if(Object.keys(filtered).length === 0){
+    alert('No facilities match the selected filters. Please adjust your selection.');
+    return;
+  }
+
+  // Build report HTML
+  var now = new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  var typeLabel = _rptType==='facility'?'Facility Report':_rptType==='role'?'Role-wise Report':'Programme Report';
+  var filterDesc = [];
+  if(progFilter) filterDesc.push('Programme: '+progFilter);
+  if(roleFilter) filterDesc.push('Role: '+roleFilter);
+  filterDesc.push(Object.keys(filtered).length+' facilities selected');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<style>body{font-family:Arial,sans-serif;margin:28px;color:#111;}'
+    + 'h1{color:#1E6B5E;margin-bottom:4px;}h2{color:#1E6B5E;border-bottom:2px solid #1E6B5E;padding-bottom:6px;margin-top:20px;}'
+    + 'table{width:100%;border-collapse:collapse;margin-bottom:20px;}'
+    + 'th{background:#1E6B5E;color:#fff;padding:8px 10px;font-size:11px;text-align:left;}'
+    + 'td{padding:7px 10px;font-size:11px;border-bottom:1px solid #eee;}'
+    + 'tr:nth-child(even){background:#F8FAFC;}'
+    + '.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}'
+    + '.green{background:#DCFCE7;color:#15803D;}.amber{background:#FEF3C7;color:#92400E;}.red{background:#FEE2E2;color:#DC2626;}'
+    + '.footer{margin-top:28px;font-size:10px;color:#9CA3AF;text-align:center;border-top:1px solid #eee;padding-top:14px;}'
+    + '@media print{.no-print{display:none;}}'
+    + '</style></head><body>';
+
+  html += '<h1>🏥 NQAS MasterClass FAST — Sub-Centre</h1>';
+  html += '<h2>'+typeLabel+'</h2>';
+  html += '<p><strong>Generated:</strong> '+now+'</p>';
+  if(filterDesc.length) html += '<p><strong>Filters:</strong> '+filterDesc.join(' · ')+'</p>';
+
+  if(_rptType === 'facility'){
+    html += '<table><tr><th>Facility</th><th>District</th><th>Programme</th><th>CHO</th><th>Staff</th><th>Cards Verified</th><th>Readiness</th></tr>';
+    Object.entries(filtered).forEach(function(entry){
+      var code=entry[0], fac=entry[1];
+      var fp=(scMasterProgress||{})[code]||{};
+      var staff=fac.staff||{};
+      var tv=0,tt=0;
+      Object.values(fp).forEach(function(days){ Object.values(days||{}).forEach(function(d){tt++;if(d.verified)tv++;}); });
+      var pct=tt>0?Math.round(tv/tt*100):0;
+      var cls=pct>=80?'green':pct>=50?'amber':'red';
+      html+='<tr><td><strong>'+(fac.name||code)+'</strong><br><small>'+code+'</small></td>'
+        +'<td>'+(fac.district||'—')+'</td>'
+        +'<td>'+(fac.progId||'—')+'</td>'
+        +'<td>'+(fac.choName||'—')+'</td>'
+        +'<td>'+Object.keys(staff).length+'</td>'
+        +'<td>'+tv+'/'+tt+'</td>'
+        +'<td><span class="badge '+cls+'">'+pct+'%</span></td></tr>';
+    });
+    html += '</table>';
+  }
+
+  else if(_rptType === 'role'){
+    html += '<table><tr><th>Facility</th><th>Staff Name</th><th>Role</th><th>Mobile</th><th>Cards Verified</th><th>Readiness</th></tr>';
+    Object.entries(filtered).forEach(function(entry){
+      var code=entry[0], fac=entry[1];
+      var fp=(scMasterProgress||{})[code]||{};
+      var staff=fac.staff||{};
+      Object.entries(staff).forEach(function(se){
+        var mob=se[0], s=se[1];
+        if(roleFilter && s.role!==roleFilter) return;
+        var sp=fp[mob]||{};
+        var tv=0,tt=0;
+        Object.values(sp).forEach(function(d){tt++;if(d.verified)tv++;});
+        var pct=tt>0?Math.round(tv/tt*100):0;
+        var cls=pct>=80?'green':pct>=50?'amber':'red';
+        html+='<tr><td>'+(fac.name||code)+'</td>'
+          +'<td>'+(s.name||'—')+'</td>'
+          +'<td>'+(s.role||'—')+'</td>'
+          +'<td>'+mob+'</td>'
+          +'<td>'+tv+'/'+tt+'</td>'
+          +'<td><span class="badge '+cls+'">'+pct+'%</span></td></tr>';
+      });
+    });
+    html += '</table>';
+  }
+
+  else if(_rptType === 'prog'){
+    var progGroups={};
+    Object.entries(filtered).forEach(function(entry){
+      var code=entry[0], fac=entry[1];
+      var p=fac.progId||'Unknown';
+      if(!progGroups[p]) progGroups[p]=[];
+      progGroups[p].push({code,fac});
+    });
+    Object.entries(progGroups).forEach(function(pe){
+      var prog=pe[0], items=pe[1];
+      html+='<h2>Programme: '+prog+'</h2>';
+      html+='<table><tr><th>Facility</th><th>District</th><th>CHO</th><th>Staff</th><th>Readiness</th></tr>';
+      items.forEach(function(item){
+        var code=item.code, fac=item.fac;
+        var fp=(scMasterProgress||{})[code]||{};
+        var staff=fac.staff||{};
+        var tv=0,tt=0;
+        Object.values(fp).forEach(function(days){ Object.values(days||{}).forEach(function(d){tt++;if(d.verified)tv++;}); });
+        var pct=tt>0?Math.round(tv/tt*100):0;
+        var cls=pct>=80?'green':pct>=50?'amber':'red';
+        html+='<tr><td><strong>'+(fac.name||code)+'</strong></td>'
+          +'<td>'+(fac.district||'—')+'</td>'
+          +'<td>'+(fac.choName||'—')+'</td>'
+          +'<td>'+Object.keys(staff).length+'</td>'
+          +'<td><span class="badge '+cls+'">'+pct+'%</span></td></tr>';
+      });
+      html+='</table>';
+    });
+  }
+
+  html += '<div class="footer">HealSol Academy · NQAS MasterClass FAST · Sub-Centre · Generated: '+now+'</div>';
+  html += '</body></html>';
+
+  if(action === 'preview'){
+    // Show in a new window WITHOUT auto-printing
+    var win = window.open('','_blank','width=900,height=700');
+    win.document.write(html
+      + '<div class="no-print" style="position:fixed;bottom:20px;right:20px;display:flex;gap:10px;">'
+      + '<button onclick="window.print()" style="background:#1E6B5E;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);">🖨 Print / Save PDF</button>'
+      + '<button onclick="window.close()" style="background:#64748B;color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer;">✕ Close</button>'
+      + '</div>');
+    win.document.close();
+  } else {
+    // Print directly
+    var win = window.open('','_blank');
+    win.document.write(html);
+    win.document.close();
+    setTimeout(function(){ win.print(); }, 800);
+  }
+  closeReportModal();
+}
 </script>
 <script>
 const DAYS_7A=[{day:1,aoc:'AE',service:'Pregnancy & Child Birth',title:'Pregnancy & Child Birth — Availability & Clinical Quality',task:'Assess Pregnancy & Child Birth services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Availability of functional ANC services  with minimum 4 ANC check-ups',r:'CHO',aoc:'A',me:'ME A1.1',method:['SI','RR']},{t:'First aid, referral  & follow up services for high risk pregnancies are provided',r:'CHO',aoc:'A',me:'ME A1.1',method:['SI','RR']},{t:'Facility provides and updates “Mother and Child Protection Card”',r:'CHO',aoc:'E',me:'ME E16.1',method:['RR','CI']},{t:'Facility ensures early registration & line listing of high risk ANC  cases',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'Clinical information & records of ANC is kept with Ayushman Arogya Mandir',r:'ANM',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'Staff has knowledge of calculating expected pregnancies in the area',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'Tracking of Missed and left out ANC',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'All pregnant women get ANC check-up as per recommended schedule',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'At ANC clinic, Pregnancy is confirmed by performing urine test',r:'CHO',aoc:'E',me:'ME E16.2',method:['RR']},{t:'Last menstrual period (LMP) is recorded and Expected date of Delivery (EDD) is calculated on first visit.',r:'CHO',aoc:'E',me:'ME E16.2',method:['SI','RR']},{t:'Comprehensive Obstetric history is recorded',r:'CHO',aoc:'E',me:'ME E16.2',method:['SI','RR']},{t:'Physical Examination & vitals  of Pregnant Women is done on every ANC visit',r:'CHO',aoc:'E',me:'ME E16.2',method:['RR']},{t:'Abdominal Examination is done as per protocol',r:'CHO',aoc:'E',me:'ME E16.2',method:['SI','RR']},{t:'Diagnostic  test for every pregnant women',r:'CHO',aoc:'E',me:'ME E16.3',method:['SI','RR']},{t:'Tetanus Toxoid (2 Dosages/ Booster) have been during ANC visits',r:'CHO',aoc:'E',me:'ME E16.3',method:['SI','RR']},{t:'Staff can recognize the cases, which would need referral to higher centre(FRU)',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is competent to identify Hypertension / Pregnancy Induced Hypertension',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is competent to identify Pre-Eclampsia',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is competent to classify anaemia according to Haemoglobin Level',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is aware of prophylactic & Therapeutic dose of IFA &  progress is monitored',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Pregnant women is counselled for planning and preparation for birth',r:'CHO',aoc:'E',me:'ME E16.5',method:['SI','CI']},{t:'Pregnant women is counselled recognize danger signs during pregnancy',r:'CHO',aoc:'E',me:'ME E16.5',method:['SI','CI']},{t:'Pregnant women is counselled diet, rest, breast feeding & family planning.',r:'CHO',aoc:'E',me:'ME E16.5',method:['SI','CI']}]},{day:2,aoc:'AE',service:'Neonatal & Infant Care',title:'Neonatal & Infant Care — Availability & Clinical Quality',task:'Assess Neonatal & Infant Care services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['SI','RR','CI','OB'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Identification, primary management & prompt referral  of sick new born & infant',r:'CHO',aoc:'A',me:'ME A1.2',method:['SI','RR']},{t:'Availability of Immunization Services',r:'ANM',aoc:'A',me:'ME A1.2',method:['SI','RR']},{t:'CHO & CHW  are aware of danger signs of new born & infant',r:'CHO',aoc:'E',me:'ME E13.1',method:['SI','RR']},{t:'Primary management & prompt referral of sick new born & infants',r:'CHO',aoc:'E',me:'ME E13.1',method:['SI','RR']},{t:'Staff is aware of post natal care Counselling',r:'CHO',aoc:'E',me:'ME E13.1',method:['SI','CI']},{t:'Check for vaccines & diluents are kept as per the recommendation of guidelines',r:'OB',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Reconstituted vaccines are not used after recommended time',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Staff checks VVM level before using vaccines  and identify discard point',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI']},{t:'Parents are counselled for informing any untoward event of concern following vaccination',r:'CI',aoc:'E',me:'ME E13.2',method:['CI','OB']},{t:'Vaccinator is aware about how to manage any immediate serious reaction/anaphylaxis',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI']},{t:'Check the availability of anaphylaxis kit with ANM at session site',r:'ANM',aoc:'E',me:'ME E13.2',method:['OB']},{t:'Check adrenaline is not expired in kit',r:'ANM',aoc:'E',me:'ME E13.2',method:['OB']},{t:'Staff is aware of the shelf life of Vit A once it is opened and ensures it is not given after shelf life',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'ANM/CHW is aware segregation policy after completion of immunization session',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Staff is aware of  Open vial policy',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Staff is aware of how to calculate the number of beneficiaries, quantity of vaccines & syringes',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Ayushman Arogya Mandir -SC maintain tracking bag/ tickler box',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Check Vaccinator is aware of different categories of AEFI',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Check person responsible for notifying & reporting of the AEFI is identified',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Process of reporting and route is communicated to all concerned',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Reporting  of AEFI cases is ensured by ANM',r:'ANM',aoc:'E',me:'ME E13.2',method:['RR']},{t:'Vaccinator is aware about how to prevent immunization error related reactions',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI']}]},{day:3,aoc:'AE',service:'Childhood & Adolescent Health',title:'Childhood & Adolescent Health — Availability & Clinical Quality',task:'Assess Childhood & Adolescent Health services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Identification, primary management, referral & follow up services for Childhood ailments',r:'CHO',aoc:'A',me:'ME A1.3',method:['SI','RR']},{t:'Education, Counselling and referral  services for Adolescent health',r:'CHO',aoc:'A',me:'ME A1.3',method:['SI','CI']},{t:'Assessment for identification of ARI, diarrhoea, malnutrition and Other Illness',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Assessment for identification of possible serious bacterial infections among young infant (0-59 days) & children (2 -59 months)',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of diarrhoea  is  done as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of ARI  is  done as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of Possible serious bacterial infection as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of Malnutrition  is  done as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','CI']},{t:'Screening, referral and follow up of children for anomalies, disabilities and developmental delays',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Provision of education & counselling services for  adolescent',r:'CHO',aoc:'E',me:'ME E15.1',method:['SI','CI']},{t:'Services for treatment & referral  of common  RTI/STI\'s, Nutritional Anaemia & Menstrual disorders',r:'CHO',aoc:'E',me:'ME E15.1',method:['RR','CI']}]},{day:4,aoc:'AE',service:'Family Planning',title:'Family Planning — Availability & Clinical Quality',task:'Assess Family Planning services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Availability of family planning services',r:'CHO',aoc:'A',me:'ME A1.4',method:['SI','RR']},{t:'Education, Counselling and referral services for family planning services',r:'CI',aoc:'A',me:'ME A1.4',method:['SI','CI']},{t:'The client is given full information about family planning methods',r:'CHO',aoc:'E',me:'ME E14.1',method:['SI','RR']},{t:'Staff is aware of Method specific counselling approaches',r:'CHO',aoc:'E',me:'ME E14.1',method:['SI','CI']},{t:'Staff is aware of case selection criteria for family planning spacing  methods',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'Staff is aware of  options, indications & methods for administration for Oral Contraceptives',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'IUD insertion & follow up is done as per standard protocol',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'Injectable Contraceptives are given as per protocols',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'Staff is aware of case selection criteria for limiting mentors',r:'CHO',aoc:'E',me:'ME E14.3',method:['SI','RR']},{t:'AAM is supporting & encouraging the clients for post sterilization follow up',r:'CHO',aoc:'E',me:'ME E14.3',method:['SI','RR']}]},{day:5,aoc:'AE',service:'Management of Communicable Diseases',title:'Management of Communicable Diseases — Availability & Clinical Quality',task:'Assess Management of Communicable Diseases services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['SI','RR','CI','OB'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Preventive & promotive services under NVBDCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Case detection, treatment, referral & follow up of cases under NVBDCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive measures  under NTEP',r:'CI',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Case detection, treatment, referral & follow up of cases under NTEP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive measures under NLEP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Case detection, treatment, referral & follow up of cases under NLEP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive services under NACP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Referral & follow up of cases under NACP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive measures  under NVHCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Case detection, treatment, referral & follow up of cases under NVHCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Availability of functional services under IDSP/ IHIP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Identification, management and  referral of acute illness & minor aliments',r:'CHO',aoc:'A',me:'ME A1.6',method:['SI','RR']},{t:'Preventive & promotive measures  for acute illness',r:'CHO',aoc:'A',me:'ME A1.6',method:['SI','CI']},{t:'Primary care team  is aware of  vector born disease control strategies',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Case detection is done for Malaria',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of Malaria treatment protocols',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of Malaria referral protocols',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of diagnostic & management of dengue as per protocols',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'NVBDCP register & records are maintained',r:'ASHA',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Facilities have adequate stock of commodities & drugs',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of sign & symptoms of prevalent vector born diseases in area',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI']},{t:'Identification of presumptive case  & their referral',r:'CHO',aoc:'E',me:'ME E10.2',method:['RR']},{t:'Ayushman Arogya Mandir support, supervision & manage presumptive, confirmed & on treatment cases including DR- TB patients',r:'CHO',aoc:'E',me:'ME E10.2',method:['RR','OB']},{t:'Staff is aware of follow up protocol after treatment completion',r:'CHO',aoc:'E',me:'ME E10.2',method:['SI','RR']},{t:'NTEP register & records are maintained',r:'CHO',aoc:'E',me:'ME E10.2',method:['RR']},{t:'Primary healthcare team  identify and ensure referral of suspected cases of Leprosy',r:'CHO',aoc:'E',me:'ME E10.3',method:['SI','RR']},{t:'NLEP register & records are maintained',r:'CHO',aoc:'E',me:'ME E10.3',method:['RR']},{t:'Facility provide awareness about leprosy & availability of its treatment',r:'CHO',aoc:'E',me:'ME E10.3',method:['SI','CI']},{t:'Ayushman Arogya Mandir-HSC is aware of their roles in NACP',r:'CHO',aoc:'E',me:'ME E10.4',method:['SI','RR']},{t:'Ayushman Arogya Mandir -SC has linkage for management of HIV/AIDS complications',r:'CHO',aoc:'E',me:'ME E10.4',method:['RR']},{t:'Staff is aware of promotional & supportive  activities done under NACP',r:'CHO',aoc:'E',me:'ME E10.4',method:['SI','RR']},{t:'Staff is aware of syndrome under surveillance in IDSP/IHIP',r:'CHO',aoc:'E',me:'ME E10.5',method:['SI','RR']},{t:'Check process to collect information in form S/ IHIP',r:'CHO',aoc:'E',me:'ME E10.5',method:['RR']},{t:'Check  Analysis & reporting of information for syndromic surveillance is done',r:'CHO',aoc:'E',me:'ME E10.5',method:['SI','RR']},{t:'Availability of diagnostic & treatment services',r:'CHO',aoc:'E',me:'ME E10.6',method:['RR']},{t:'Staff is aware of preventive measures for NVHCP',r:'CHO',aoc:'E',me:'ME E10.6',method:['SI','OB']}]},{day:6,aoc:'AE',service:'Management of Non-Communicable Diseases',title:'Management of Non-Communicable Diseases — Availability & Clinical Quality',task:'Assess Management of Non-Communicable Diseases services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Availability of services for Hypertension',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for Diabetes',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for Nonalcoholic fatty liver disease (NAFLD)',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of Services for  Cancers',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for respiratory diseases',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for Epilepsy',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of  services for  locally prevalent health diseases & substance abuse',r:'CHO',aoc:'A',me:'ME A1.7',method:['RR']},{t:'Preventive & promotive services under NCD',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','CI']},{t:'Ayushman Arogya Mandir undertakes  health promotion and disease prevention activities through Community level resources',r:'CI',aoc:'A',me:'ME A1.14',method:['RR','CI']},{t:'Provision of wellness services through Yoga and other activities',r:'CHO',aoc:'A',me:'ME A1.14',method:['SI','CI']},{t:'Provision of AYUSH services',r:'CHO',aoc:'A',me:'ME A1.14',method:['SI','RR']},{t:'Provision of counselling services for Eat Right',r:'CHO',aoc:'A',me:'ME A1.14',method:['SI','CI']},{t:'Staff is aware of process of population identification and referral for hypertension',r:'CHO',aoc:'E',me:'ME E11.1',method:['SI','RR']},{t:'CHO is  aware of sign & symptoms  of Hypertension',r:'CHO',aoc:'E',me:'ME E11.1',method:['SI']},{t:'Ayushman Arogya Mandir ensures frequency of follow up & supply of required medicines',r:'CHO',aoc:'E',me:'ME E11.1',method:['RR','CI']},{t:'Staff is aware of promotional & supportive  activities for Hypertension',r:'CHO',aoc:'E',me:'ME E11.1',method:['SI','CI']},{t:'Staff is aware of process of population identification and referral for diabetes',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','RR']},{t:'CHO is  aware of sign & symptoms  of diabetes',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI']},{t:'Ayushman Arogya Mandir ensures frequency of follow up & supply of required medicines',r:'CHO',aoc:'E',me:'ME E11.2',method:['RR','CI']},{t:'Check Patient is counselled about identification & immediate management hypoglycaemia',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','CI']},{t:'Ayushman Arogya Mandir is aware of  risk factors of  Nonalcoholic fatty liver disease (NAFLD)',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','RR']},{t:'Staff is aware of promotional & supportive  activities for diabetes',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','CI']},{t:'Check cancer screening services are provided through Ayushman Arogya Mandir',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','RR']},{t:'Staff is aware about sign & symptom of cervical cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI']},{t:'Staff is aware about sign & symptom of Breast cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI']},{t:'Staff is aware about sign & symptom of Oral Cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI']},{t:'Check with  staff about methodology followed for  cancer screening',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','RR']},{t:'Check CHW is aware of referral centre for all types of cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','RR']},{t:'Staff is aware of promotional & supportive  activities for cancers',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','CI']},{t:'Confirmation and referral of cases for Tobacco/alcohol/ substance abuse',r:'CHO',aoc:'E',me:'ME E11.4',method:['SI','RR']},{t:'Promotional & supportive  activities for Tobacco/alcohol/ substance abuse',r:'CHO',aoc:'E',me:'ME E11.4',method:['SI','RR','CI']},{t:'Check Screening & referral  locally prevalent diseases',r:'CHO',aoc:'E',me:'ME E11.4',method:['SI','CI']},{t:'Check Ayushman Arogya Mandir is providing Yoga services',r:'ASHA',aoc:'E',me:'ME E11.5',method:['SI','RR']},{t:'Check Yoga sessions are conducted regularly',r:'CHO',aoc:'E',me:'ME E11.5',method:['RR','CI']},{t:'Check counselling of mother\'s for nutrition & hygiene maintenance under Eat right',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check staff counsel and guide the mother\'s about household preparation of complementary feeds',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about balanced diet',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about food fortification',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about Eat safe practices',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about food safety',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']}]},{day:7,aoc:'AE',service:'Drugs & Diagnostics',title:'Drugs & Diagnostics — Availability & Clinical Quality',task:'Assess Drugs & Diagnostics services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['RR','CI','SI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Availability of basic diagnostic services including NHP',r:'ANM',aoc:'A',me:'ME A2.1',method:['RR','CI']},{t:'Linkages with the Central diagnostic units (Hub & spoke)',r:'ANM',aoc:'A',me:'ME A2.1',method:['SI','RR']},{t:'Availability of drugs as per EDL',r:'CHO',aoc:'A',me:'ME A2.2',method:['SI','RR']},{t:'Availability of drugs for refill for chronic cases',r:'CHO',aoc:'A',me:'ME A2.2',method:['SI','RR']}]},{day:8,aoc:'AE',service:'Emergency',title:'Emergency — Availability & Clinical Quality',task:'Assess Emergency services — verify availability (AoC A) and clinical quality (AoC E).',me:'ME A1 | ME E',aocTags:['AoC A — Service Provision','AoC E — Clinical Services'],methods:['SI','RR','CI','OB'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Emergency protocols for first aid and stabilization are available',r:'CHO',aoc:'E',me:'ME E 7.1',method:['SI','RR']},{t:'Staff is aware of  procedure for CPR',r:'CHO',aoc:'E',me:'ME E 7.1',method:['SI','RR']},{t:'Ayushman Arogya Mandir ensures timely availability of ambulances services for emergency cases',r:'CHO',aoc:'E',me:'ME E 7.1',method:['RR','CI']},{t:'Emergency care is given in case of disaster',r:'CHO',aoc:'E',me:'ME E 7.2',method:['SI','OB']},{t:'Staff is aware of  process of sorting the patients in case of mass causalty/ outbreak',r:'CHO',aoc:'E',me:'ME E 7.2',method:['SI','RR']}]},{day:9,aoc:'B',service:'Patient Rights',title:'Patient Rights, Dignity & Consent',task:'Verify patient rights charter, informed consent, privacy, and dignity.',me:'ME B1 | ME B2',aocTags:['AoC B — Patient Rights'],methods:['SI','OB','CI'],roles:{prime:'CHO',support:['ANM']},cps:[{t:'Name of the facility & list of services and drugs available are displayed prominently',r:'OB',aoc:'B',me:'ME B1.1',method:['OB']},{t:'Branding of Ayushman Arogya Mandir is done as per guidelines',r:'OB',aoc:'B',me:'ME B1.1',method:['OB']},{t:'Name of AAM is written in regional language',r:'OB',aoc:'B',me:'ME B1.1',method:['SI','OB']},{t:'Citizen charter is displayed',r:'OB',aoc:'B',me:'ME B1.1',method:['OB']},{t:'IEC Material is displayed as per services provided',r:'OB',aoc:'B',me:'ME B1.2',method:['OB']},{t:'Ayushman Arogya Mandir promotes wellness through EAT right campaign',r:'OB',aoc:'B',me:'ME B1.2',method:['CI','OB']},{t:'Patient is informed about clinical condition and treatment plan',r:'CI',aoc:'B',me:'ME B1.3',method:['RR','CI']},{t:'Primary healthcare team  provide information to beneficiaries or families regarding their entitlements',r:'CHO',aoc:'B',me:'ME B1.3',method:['SI','CI']},{t:'Ayushman Arogya Mandir is located closer to community',r:'CHO',aoc:'B',me:'ME B2.1',method:['SI','CI']},{t:'Check outreach sessions are conducted',r:'CHO',aoc:'B',me:'ME B2.1',method:['SI','RR']},{t:'The full range of services are available for the time period, as mandated',r:'CHO',aoc:'B',me:'ME B2.1',method:['RR','CI']},{t:'Check Ayushman Arogya Mandir premises is free from any physical barrier',r:'OB',aoc:'B',me:'ME B2.2',method:['OB']},{t:'Check Ayushman Arogya Mandir premises is obstacle free for ambulatory and semi ambulatory individuals',r:'OB',aoc:'B',me:'ME B2.2',method:['OB']}]},{day:10,aoc:'B',service:'Patient Rights',title:'Equity, Feedback & Non-Discrimination',task:'Verify non-discrimination in services, feedback system, and complaint resolution.',me:'ME B2 | ME B3',aocTags:['AoC B — Patient Rights'],methods:['CI','SI','RR'],roles:{prime:'CHO',support:['ANM']},cps:[{t:'Check for special precaution is taken for maintaining privacy  & confidentiality of cases having social stigma',r:'CHO',aoc:'B',me:'ME B2.3',method:['SI','RR']},{t:'Availability of female staff / attendant, if a male CHO examines a female patients',r:'CHO',aoc:'B',me:'ME B3.1',method:['SI','CI']},{t:'There is no discrimination based religion, ethnicity, socio economic status, cast, gender & language etc',r:'CI',aoc:'B',me:'ME B3.1',method:['SI','RR']},{t:'Check Staff and Communities is aware of Patient rights and responsibilities',r:'OB',aoc:'B',me:'ME B3.2',method:['SI','OB']},{t:'Check staff & community is aware of grievance redressal system',r:'CHO',aoc:'B',me:'ME B3.3',method:['SI','CI']},{t:'Availability of  complaint reporting system',r:'OB',aoc:'B',me:'ME B3.3',method:['RR','OB']},{t:'Availability of screen/ curtains in examination area and in windows',r:'OB',aoc:'B',me:'ME B4.1',method:['OB']},{t:'Patient records are kept in safe custody',r:'OB',aoc:'B',me:'ME B4.2',method:['SI','OB']},{t:'Check patient and their kin\'s have access to clinical records',r:'CHO',aoc:'B',me:'ME B4.2',method:['SI','RR']},{t:'Behaviour of staff is empathetic and courteous to patients and visitors',r:'CI',aoc:'B',me:'ME B4.3',method:['CI']},{t:'Ayushman Arogya Mandir provide free of cost  access to all the services',r:'CHO',aoc:'B',me:'ME B5.1',method:['RR','CI']},{t:'The facility provides free of cost essential medicines and refills as per treatment plan',r:'CHO',aoc:'B',me:'ME B5.1',method:['SI','CI']},{t:'Availability of free teleconsultation and diagnostic services',r:'CHO',aoc:'B',me:'ME B5.1',method:['SI','CI']}]},{day:11,aoc:'C',service:'Human Resources',title:'Human Resources & Attendance',task:'Verify all sanctioned positions filled, attendance registers, and training records.',me:'ME C1',aocTags:['AoC C — Inputs'],methods:['RR','SI'],roles:{prime:'CHO',support:['ANM']},cps:[{t:'Well ventilated & illuminated clinic room with examination space',r:'OB',aoc:'C',me:'ME C1.1',method:['OB']},{t:'Availability of adequate patient amentities',r:'OB',aoc:'C',me:'ME C1.1',method:['OB']},{t:'Demarcated space for Laboratory / diagnostics, drug storage',r:'OB',aoc:'C',me:'ME C1.1',method:['OB']},{t:'Adequate space/ room for Yoga and immunization activities',r:'OB',aoc:'C',me:'ME C1.1',method:['OB']},{t:'Availability of regular &  uninterrupted electricity supply',r:'OB',aoc:'C',me:'ME C1.1',method:['SI','OB']},{t:'Adequate water supply with storage facility',r:'OB',aoc:'C',me:'ME C1.1',method:['SI','OB']},{t:'Ayushman Arogya Mandir has installed fire  extinguisher and staff know how to operate it',r:'OB',aoc:'C',me:'ME C1.2',method:['SI','OB']},{t:'Ayushman Arogya Mandir does not have temporary connections and loosely hanging wires',r:'OB',aoc:'C',me:'ME C1.2',method:['SI','OB']},{t:'Ayushman Arogya Mandir has adequate ICT hardware  for  efficient delivery of services',r:'CHO',aoc:'C',me:'ME C1.3',method:['SI','RR']},{t:'Ayushman Arogya Mandir has adequate ICT software  for  efficient delivery of services',r:'CHO',aoc:'C',me:'ME C1.3',method:['SI','RR']},{t:'Availability of Community Health Officer',r:'CHO',aoc:'C',me:'ME C2.1',method:['SI','RR']},{t:'Availability of ANM',r:'CHO',aoc:'C',me:'ME C2.2',method:['SI','RR']},{t:'Availability of Multipurpose Worker',r:'CHO',aoc:'C',me:'ME C2.2',method:['SI','RR']},{t:'Availability of ASHA & ASHA facilitator',r:'CHO',aoc:'C',me:'ME C2.2',method:['SI','RR']},{t:'Check duty roster is prepared prepared, updated & followed for all cadres',r:'CHO',aoc:'C',me:'ME C2.3',method:['RR']},{t:'Check field visit plans are prepared, updated & followed by primary healthcare team',r:'CHO',aoc:'C',me:'ME C2.3',method:['RR']},{t:'Check parameters for assessing skills and proficiency of  staff has been defined',r:'CHO',aoc:'C',me:'ME C3.1',method:['SI','RR']}]},{day:12,aoc:'C',service:'Drugs & Equipment',title:'Drugs, Equipment & Diagnostics',task:'Inspect drug availability, expiry, storage, equipment calibration, and diagnostic services.',me:'ME C2 | ME C3',aocTags:['AoC C — Inputs'],methods:['OB','RR'],roles:{prime:'ANM',support:['CHO']},cps:[{t:'Check for performance evaluation is done at least once in a year',r:'CHO',aoc:'C',me:'ME C3.1',method:['SI','RR']},{t:'CHO is trained as per mandate',r:'CHO',aoc:'C',me:'ME C3.2',method:['SI','RR']},{t:'MPW is trained as per mandate',r:'MPW',aoc:'C',me:'ME C3.2',method:['SI','RR']},{t:'AHSA  is trained as per mandate',r:'ASHA',aoc:'C',me:'ME C3.2',method:['SI','RR']},{t:'Staff is provided with Quality assurance training',r:'CHO',aoc:'C',me:'ME C3.2',method:['SI','RR']},{t:'Availability of disposables for Dressing / Emergency management',r:'OB',aoc:'C',me:'ME C4.2',method:['RR','OB']},{t:'Availability of disposables at Clinics',r:'OB',aoc:'C',me:'ME C4.2',method:['RR','OB']},{t:'Availability of functional Equipment & instruments  for examination & Monitoring  at Clinic',r:'OB',aoc:'C',me:'ME C5.1',method:['OB']},{t:'Availability of furniture & fixture at Clinics',r:'OB',aoc:'C',me:'ME C5.2',method:['OB']},{t:'Availability of Anaesthetics agents',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of  Analgesics, Anti Pyretic, NSAIDS, and Anti-allergic',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability on Anticonvulsants /Anti epileptics',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Intestinal Anti Helminthes and Antifilarial',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Anti Bacterial',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Anti leprosy',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Anti Malarial',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of anti Anaemic drug',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']}]},{day:13,aoc:'C',service:'Infrastructure',title:'Infrastructure, WASH & Safety',task:'Inspect SC building, water, sanitation, electricity, waste disposal, and fire safety.',me:'ME C4 | ME C5',aocTags:['AoC C — Inputs'],methods:['OB'],roles:{prime:'CHO',support:['ANM']},cps:[{t:'Availability of Cardiovascular medicines',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of drugs for Hypertension',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of drugs for Hypolipidemic',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Dermatological & antifungal  Medicines',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Diuretics',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Gastroinstinal medicines',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Contraceptives',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of drugs for diabetes Mellitus',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of drugs for Thyroid',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of medicines for Tespiratory tract',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of IV Fluids',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Vitamins and Minerals',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Antidotes',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of injectables and antispetics',r:'CHO',aoc:'C',me:'ME C4.1',method:['RR','OB']},{t:'Availability of Emergency Drug Tray / injectables at injection room',r:'CHO',aoc:'C',me:'ME C4.1',method:['OB']},{t:'Availability of  Rapid Diagnostic Kits',r:'OB',aoc:'C',me:'ME C4.2',method:['RR','OB']},{t:'Availability of Drugs and Consumables for  VHNDs or camps',r:'OB',aoc:'C',me:'ME C4.2',method:['RR','OB']}]},{day:14,aoc:'D',service:'BMW & Housekeeping',title:'Biomedical Waste & Housekeeping',task:'Inspect BMW segregation, disposal, and SC cleanliness.',me:'ME D1 | ME D2',aocTags:['AoC D — Support Services'],methods:['OB','RR','SI'],roles:{prime:'CHO',support:['ANM']},cps:[{t:'Ayushman Arogya Mandir Building is painted/whitewashed in uniform colour & its branding done as per the guideline',r:'OB',aoc:'D',me:'ME D1.1',method:['OB']},{t:'Check building & its premises is well maintained',r:'OB',aoc:'D',me:'ME D1.1',method:['OB']},{t:'No condemned/Junk material in Ayushman Arogya Mandir (corridors, roof,  administrative area , backyard)',r:'CHO',aoc:'D',me:'ME D1.1',method:['RR','OB']},{t:'There is system of timely corrective & preventive   break down maintenance of the equipment',r:'CHO',aoc:'D',me:'ME D1.1',method:['RR']},{t:'All the measuring equipment/ instrument  are calibrated',r:'CHO',aoc:'D',me:'ME D1.1',method:['RR']},{t:'Check all the areas are clean & hygienic',r:'OB',aoc:'D',me:'ME D1.2',method:['OB']},{t:'Check availability of adequate supply of cleaning material',r:'OB',aoc:'D',me:'ME D1.2',method:['RR','OB']},{t:'Check staff is aware of use of 2 bucket system & disinfection of mop after cleaning',r:'ANM',aoc:'D',me:'ME D1.2',method:['SI','OB']},{t:'Clean and adequate linen is available',r:'ANM',aoc:'D',me:'ME D1.2',method:['RR','OB']},{t:'Information regarding  illness and minor aliments are recorded & updated using IT platform',r:'CHO',aoc:'D',me:'ME D3.1',method:['SI','RR']},{t:'Information regarding RMNCHA care seekers are recorded & updated using IT platform',r:'CHO',aoc:'D',me:'ME D3.1',method:['RR']},{t:'Information regarding cases of  communicable & Non- communicable  diseases  are recorded & updated using IT platform',r:'CHO',aoc:'D',me:'ME D3.1',method:['RR']},{t:'Functional platform/s and updated digital records   to assess the coverage and measure outcomes of healthcare facility',r:'CHO',aoc:'D',me:'ME D3.1',method:['RR']},{t:'Functional platform/s and updated digital records for work/ task management and reporting and monitoring of the  performance of health care provider',r:'CHO',aoc:'D',me:'ME D3.1',method:['RR']},{t:'Ayushman Arogya Mandir has established  procedure for safe keeping & retrieval of  paper based records',r:'OB',aoc:'D',me:'ME D3.2',method:['SI','OB']},{t:'Ayushman Arogya Mandir has established procedure for access & retrieval of  electronic records',r:'ANM',aoc:'D',me:'ME D3.2',method:['SI','OB']},{t:'Hubs are identified for tele consultation',r:'CHO',aoc:'D',me:'ME D3.3',method:['RR','OB']},{t:'Cases are identified for tele consultation for specialist & non specialist consultation',r:'CHO',aoc:'D',me:'ME D3.3',method:['SI','RR']}]},{day:15,aoc:'D',service:'Sterilisation',title:'Sterilisation, Linen & Referral Transport',task:'Verify sterilisation procedures, linen management, and referral transport linkages.',me:'ME D3 | ME D4',aocTags:['AoC D — Support Services'],methods:['OB','RR'],roles:{prime:'ANM',support:['CHO']},cps:[{t:'Co ordination with specialist / super specialist and patients for tele consultation',r:'CHO',aoc:'D',me:'ME D3.3',method:['SI','RR']},{t:'Dispense drugs as per prescription received through tele consultation',r:'CHO',aoc:'D',me:'ME D3.3',method:['RR']},{t:'Ayushman Arogya Mandir has functional  Jan Arogya  Samiti',r:'CHO',aoc:'D',me:'ME D4.1',method:['SI','RR']},{t:'Committee members are aware of its roles & responsibilities',r:'CHO',aoc:'D',me:'ME D4.1',method:['SI','RR','CI']},{t:'JAS  meetings are held at defined intervals',r:'CHO',aoc:'D',me:'ME D4.1',method:['RR']},{t:'Timely planning & utilization of untied funds',r:'CHO',aoc:'D',me:'ME D4.1',method:['RR']},{t:'Check JAS   provide support for Health promotion & prevention activities',r:'ANM',aoc:'D',me:'ME D4.1',method:['SI','RR']},{t:'Check social accountability mechanism are place and conducted at periodic intervals.',r:'CHO',aoc:'D',me:'ME D4.2',method:['RR']},{t:'Check JAS committee has prepared action plan along with Ayushman Arogya Mandir',r:'CHO',aoc:'D',me:'ME D4.2',method:['RR']},{t:'Check CHO conducts periodic meetings with MPW & ASHA',r:'MPW',aoc:'D',me:'ME D4.3',method:['SI','RR']},{t:'Check CHO provide  on job mentoring & supervision for VHSND or  campaign and household visits',r:'ANM',aoc:'D',me:'ME D4.3',method:['SI','RR']},{t:'Check PHC -MO provide supportive supervision  & monitoring for Ayushman Arogya Mandir activities',r:'CHO',aoc:'D',me:'ME D4.3',method:['SI','RR']},{t:'Check Ayushman Arogya Mandir is aware of community level approaches for health promotion and disease  prevention',r:'ANM',aoc:'D',me:'ME D5.1',method:['SI','CI']},{t:'Check VHSNC are constituted & functional',r:'CHO',aoc:'D',me:'ME D5.1',method:['SI','RR']},{t:'Check number of VHND planned & conducted in CHO\'s catering area in preceding quarter',r:'CHO',aoc:'D',me:'ME D5.1',method:['RR','CI']},{t:'Check the process followed to identify key challenges and list of priorities for monthly campaigns',r:'ASHA',aoc:'D',me:'ME D5.1',method:['SI','RR']},{t:'Check Annual calendar is prepared for monthly campaign  based on situational analysis',r:'CHO',aoc:'D',me:'ME D5.1',method:['RR']},{t:'Check health promotion campaign  are conducted as per planning',r:'CHO',aoc:'D',me:'ME D5.1',method:['RR']}]},{day:16,aoc:'D',service:'Records & MIS',title:'Records, MIS & HMIS Reporting',task:'Review all SC registers and HMIS reporting for completeness, accuracy, and timely submission.',me:'ME D5',aocTags:['AoC D — Support Services'],methods:['RR','SI'],roles:{prime:'ANM',support:['CHO']},cps:[{t:'There is a system of taking feedback  from ASHAs / VHNSCs/ VHND to improve the services',r:'ASHA',aoc:'D',me:'ME D5.1',method:['SI','RR']},{t:'Ayushman Arogya Mandir have created Patient support groups for  various issues/ disease conditions',r:'CI',aoc:'D',me:'ME D5.2',method:['RR','CI']},{t:'Check members of PSGs aware of their roles',r:'CI',aoc:'D',me:'ME D5.2',method:['SI','CI']},{t:'Check the  frequency , location & timing of PSG meetings facilitated by Ayushman Arogya Mandir',r:'CI',aoc:'D',me:'ME D5.2',method:['RR','CI']},{t:'Primary health care team/worker is aware of their role in conducting PSGs',r:'CI',aoc:'D',me:'ME D5.2',method:['SI']},{t:'Ayushman Arogya Mandir engage other allied departments for intersectoral convergence',r:'CHO',aoc:'D',me:'ME D5.3',method:['SI','RR']},{t:'Ayushman Arogya Mandir promotes wellness & health promotion through Yoga',r:'CHO',aoc:'D',me:'ME D5.3',method:['SI','RR']},{t:'Authorization for Bio Medical waste Management  and latest copy of regulation is available',r:'CHO',aoc:'D',me:'ME D6.1',method:['RR']},{t:'No Smoking sign is displayed at the prominent places',r:'OB',aoc:'D',me:'ME D6.1',method:['OB']},{t:'Any positive report of notifiable disease is intimated to designated authorities',r:'CHO',aoc:'D',me:'ME D6.1',method:['RR']},{t:'Ayushman Arogya Mandir  has a process to consolidate and calculate the consumption',r:'CHO',aoc:'D',me:'ME D2.1',method:['SI','RR']},{t:'Check Drugs and consumables forecasting  and indenting is IT enabled',r:'CHO',aoc:'D',me:'ME D2.1',method:['RR']},{t:'Check there is established system to timely indent the drugs as per services package',r:'CHO',aoc:'D',me:'ME D2.1',method:['SI','RR']},{t:'Check there is no stock out of essential & vital drugs',r:'CHO',aoc:'D',me:'ME D2.1',method:['RR']},{t:'There is specified place to store medicines in Ayushman Arogya Mandir',r:'OB',aoc:'D',me:'ME D2.2',method:['OB']},{t:'Check drugs are kept in  racks and shelves with proper  labelling',r:'OB',aoc:'D',me:'ME D2.2',method:['OB']},{t:'Check process followed to maintain the temperature of  refrigerator used for drugs/ vaccine/ lab kits',r:'OB',aoc:'D',me:'ME D2.2',method:['RR','OB']},{t:'There is system in place to maintain expiry & near expiry of drugs',r:'CHO',aoc:'D',me:'ME D2.3',method:['SI','OB']},{t:'No expired drug is found in Ayushman Arogya Mandir',r:'CHO',aoc:'D',me:'ME D2.3',method:['OB']}]},{day:17,aoc:'Boss',service:'Boss Battle',title:'⚔️ BOSS BATTLE I — Mid-Programme Mock Assessment',task:'⚔️ Full self-audit of all Areas of Concern. Score each area honestly and prepare gap closure plan.',me:'All MEs',aocTags:['All Areas of Concern'],methods:['SI','RR','OB','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},isBoss:true,cps:[{t:'AoC A (Service Provision) — self-audit complete',r:'CHO',aoc:'Boss',me:'',method:['SI']},{t:'AoC B (Patient Rights) — self-audit complete',r:'CHO',aoc:'Boss',me:'',method:['CI']},{t:'AoC C (Inputs) — self-audit complete',r:'CHO',aoc:'Boss',me:'',method:['OB']},{t:'AoC D (Support Services) — self-audit complete',r:'CHO',aoc:'Boss',me:'',method:['OB']},{t:'AoC E (Clinical Services) — self-audit complete',r:'CHO',aoc:'Boss',me:'',method:['SI']},{t:'AoC F (Infection Control) — self-audit complete',r:'CHO',aoc:'Boss',me:'',method:['OB']},{t:'AoC G (Quality Management) — self-audit complete',r:'CHO',aoc:'Boss',me:'',method:['RR']},{t:'AoC H (Outcome) — reviewed and documented',r:'CHO',aoc:'Boss',me:'',method:['RR']},{t:'Top gaps identified — corrective action plan prepared',r:'CHO',aoc:'Boss',me:'',method:['RR']},{t:'Block/PHC supervisor informed of readiness status',r:'CHO',aoc:'Boss',me:'',method:['SI']}]},{day:18,aoc:'F',service:'Hand Hygiene',title:'Hand Hygiene, PPE & Standard Precautions',task:'Observe hand hygiene practices, PPE use, needle disposal, and standard precautions.',me:'ME F1 | ME F2',aocTags:['AoC F — Infection Control'],methods:['OB','SI'],roles:{prime:'CHO',support:['ANM']},cps:[{t:'Staff is working as team to improve sanitation & hygiene of the facility',r:'CHO',aoc:'F',me:'ME F1.1',method:['SI','RR']},{t:'Check Records of Medical Check-up and Immunization',r:'CHO',aoc:'F',me:'ME F1.1',method:['RR']},{t:'Facility  has a system to monitor cleanliness & hygiene  practices',r:'OB',aoc:'F',me:'ME F1.1',method:['RR','OB']},{t:'Availability of Hand washing facilities',r:'OB',aoc:'F',me:'ME F2.1',method:['OB']},{t:'Check  Washbasin, tap & running water as per standard protocols',r:'OB',aoc:'F',me:'ME F2.1',method:['SI','OB']},{t:'Staff is trained and adheres to hand washing practices',r:'CHO',aoc:'F',me:'ME F2.1',method:['SI','OB']},{t:'Check availability & use of  PPE',r:'OB',aoc:'F',me:'ME F3.1',method:['RR','OB']},{t:'Compliance to correct method of wearing and removing PPE',r:'CHO',aoc:'F',me:'ME F3.1',method:['SI','OB']},{t:'Adequate supply of decontamination  and cleaning agents  at the point of use',r:'OB',aoc:'F',me:'ME F4.1',method:['RR','OB']},{t:'Decontamination and cleaning of instruments and surfaces',r:'ANM',aoc:'F',me:'ME F4.1',method:['SI','OB']},{t:'Availability of disinfectants',r:'OB',aoc:'F',me:'ME F4.2',method:['RR','OB']},{t:'Staff adhere to the process of disinfection',r:'ANM',aoc:'F',me:'ME F4.2',method:['SI','RR']},{t:'Sterilization/HLD records are maintained',r:'CHO',aoc:'F',me:'ME F4.2',method:['RR']}]},{day:19,aoc:'F',service:'Sterilisation',title:'Antisepsis, Sterilisation & HAI Prevention',task:'Inspect antisepsis, sterilisation practices, surface disinfection, and HAI prevention.',me:'ME F3 | ME F4',aocTags:['AoC F — Infection Control'],methods:['OB','RR'],roles:{prime:'ANM',support:['CHO']},cps:[{t:'Availability of colour coded bins and non chlorinated plastic bags and needle cutters  at point of waste generation',r:'OB',aoc:'F',me:'ME F5.1',method:['SI','OB']},{t:'Segregation of BMW is done as per latest prevalent rules',r:'OB',aoc:'F',me:'ME F5.1',method:['SI','OB']},{t:'Check there is no mixing of the Biomedical & general waste',r:'OB',aoc:'F',me:'ME F5.1',method:['OB']},{t:'Ayushman Arogya Mandir has designated area for storage for BMW',r:'OB',aoc:'F',me:'ME F5.1',method:['SI','OB']},{t:'Disinfection of  broken / discarded Glassware   is done as per recommended procedure',r:'OB',aoc:'F',me:'ME F5.2',method:['SI','OB']},{t:'Sharp waste is stored in puncture proof container',r:'OB',aoc:'F',me:'ME F5.2',method:['SI','OB']},{t:'Check saff is aware what to do in case of exposure to injury or any blood/body fluid',r:'CHO',aoc:'F',me:'ME F5.2',method:['SI','RR']},{t:'Facility has provision for liquid waste management',r:'OB',aoc:'F',me:'ME F5.3',method:['SI','OB']},{t:'Check facility is mercury free',r:'OB',aoc:'F',me:'ME F5.3',method:['SI','OB']},{t:'Ayushman Arogya Mandir  waste is collected & transported in close container/bag',r:'CHO',aoc:'F',me:'ME F5.4',method:['RR']},{t:'Ayushman Arogya Mandir has facility for disposal of Biomedical waste',r:'CHO',aoc:'F',me:'ME F5.4',method:['RR']},{t:'Facility manages recyclable waste as per approved procedure',r:'CHO',aoc:'F',me:'ME F5.4',method:['RR']},{t:'No burning of any category of waste within/outside Ayushman Arogya Mandir',r:'OB',aoc:'F',me:'ME F5.4',method:['OB']}]},{day:20,aoc:'G',service:'QI System',title:'Quality Improvement System & SOPs',task:'Review QI meetings, SOPs, quality indicators, and KAYAKALP/5S activities.',me:'ME G1 | ME G2',aocTags:['AoC G — Quality Management'],methods:['RR','SI'],roles:{prime:'CHO',support:['ANM']},cps:[{t:'The Ayushman Arogya Mandir  has  Quality team in place',r:'CHO',aoc:'G',me:'ME G1.1',method:['RR']},{t:'Quality  team meets monthly and review its activities',r:'CHO',aoc:'G',me:'ME G1.1',method:['RR']},{t:'Review the minutes of meeting',r:'CHO',aoc:'G',me:'ME G1.1',method:['RR']},{t:'Results of Kayakalp and NQAS Internal /External assessments are reviewed',r:'CHO',aoc:'G',me:'ME G1.1',method:['RR']},{t:'Client satisfaction survey is done',r:'CHO',aoc:'G',me:'ME G2.1',method:['RR']},{t:'Analysis of low performing attributes is done and action is planned',r:'CHO',aoc:'G',me:'ME G2.1',method:['RR']},{t:'Instructions for using RDK are available',r:'CHO',aoc:'G',me:'ME G3.1',method:['RR']},{t:'Work instruction for RMNCHA services',r:'CHO',aoc:'G',me:'ME G3.1',method:['RR']},{t:'Protocols and instructions for preventing, identifying and managing AEFI are displayed at immunization site',r:'CHO',aoc:'G',me:'ME G3.1',method:['RR']},{t:'WI for screening, management and appropriate referral of NCDs',r:'CHO',aoc:'G',me:'ME G3.1',method:['RR']}]},{day:21,aoc:'G',service:'Patient Safety',title:'Patient Safety, Staff Training & Competency',task:'Verify patient safety systems, training records, and skill competency assessments.',me:'ME G3 | ME G4',aocTags:['AoC G — Quality Management'],methods:['OB','RR','SI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'WI for screening, management and appropriate referral of Communicable disease',r:'CHO',aoc:'G',me:'ME G3.1',method:['RR']},{t:'Service delivery and performance of Ayushman Arogya Mandir is reviewed  regularly',r:'CHO',aoc:'G',me:'ME G4.1',method:['SI','RR']},{t:'Ayushman Arogya Mandir performance is reviewed regularly by block/district/state nodal officer',r:'CHO',aoc:'G',me:'ME G4.1',method:['RR']},{t:'Check gaps have been identified and actions are taken',r:'CHO',aoc:'G',me:'ME G4.1',method:['RR']},{t:'Periodic assessment using NQAS checklist',r:'CHO',aoc:'G',me:'ME G4.2',method:['RR']},{t:'Periodic assessment using Kayakalp checklist',r:'CHO',aoc:'G',me:'ME G4.2',method:['RR']},{t:'Non Compliance found in the internal Assessment using NQAS, Kayakalp and other monitoring checklists are recorded',r:'CHO',aoc:'G',me:'ME G4.3',method:['RR']},{t:'Root cause analysis is done',r:'CHO',aoc:'G',me:'ME G4.3',method:['RR']},{t:'Ayushman Arogya Mandir team improve  on the identified non compliances & action are taken',r:'CHO',aoc:'G',me:'ME G4.3',method:['RR']},{t:'Quality policy are defined',r:'CHO',aoc:'G',me:'ME G5.1',method:['RR']},{t:'Quality objectives are defined for the Ayushman Arogya Mandir',r:'CHO',aoc:'G',me:'ME G5.1',method:['RR']}]},{day:22,aoc:'H',service:'Outcomes',title:'Health Outcomes & Patient Satisfaction',task:'Review health outcome indicators, patient satisfaction, and NQAS score improvement.',me:'ME H',aocTags:['AoC H — Outcome'],methods:['RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'No. of Case specific OPD of pregnant mothers per month',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of follow up cases (repeat visit) per month pregnant mothers',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of  cases referred to higher centre per month (Case specific referral of pregnant mothers)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'Percentage of women receiving all four ANCs',r:'CHO',aoc:'H',me:'ME H2.1',method:['RR']},{t:'No. of high risk pregnancy identified during ANC',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'No. of Case specific OPD of neonate &  infant per month',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of follow up cases (repeat visit) per month neonate & infant',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of  cases referred to higher centre per month (Case specific referral of neonate & infant)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'Drop out rate for Pentavalent immunization',r:'CHO',aoc:'H',me:'ME H2.1',method:['RR']},{t:'No. of AEFI cases reported',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'No. of Children with diarrhoea treated with ORS & Zn',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'No. of Case specific OPD of children & adolescent per month',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of follow up cases (repeat visit) per month children & adolescent',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of  cases referred to higher centre per month (Case specific referral of children & adolescent)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of Anaemia cases treated successfully',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'No. of Case specific OPD of Family Planning per month',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of follow up cases (repeat visit) per month of FP',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of  cases referred to higher centre per month (Case specific referral of Femily Planning)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'Contraceptives acceptance rate',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'No. of Case specific OPD of CD per month',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of follow up cases (repeat visit) per month of CD',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of  cases referred to higher centre per month (Case specific referral of Communicable Diseases)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'Treatment completion rate for Tuberculosis',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'No. of Case specific OPD per month NCD (Hypertension, Diabetes & cancer)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of  cases referred to higher centre per month NCD (Hypertension, Diabetes & cancer)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of case specific follow up per month NCD (Hypertension, Diabetes & cancer)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'No. of  drop out rate cases following identification NCD (Hypertension, Diabetes & cancer)',r:'CHO',aoc:'H',me:'ME H1.1',method:['RR']},{t:'Drop out rate for NCDs',r:'CHO',aoc:'H',me:'ME H2.1',method:['RR']},{t:'Percentage of cases on treatment achieved blood pressure control',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'Percentage of cases on treatment achieved blood sugar control',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'Percentage of cases screened positive for cancer underwent biopsy',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'Percentage of cancer cases underwent treatment for each cancer',r:'CHO',aoc:'H',me:'ME H3.1',method:['RR']},{t:'Percentage of  chronic cases who started treatment at PHC/above are still under treatment for last 3 months',r:'CHO',aoc:'H',me:'ME H4.1',method:['RR']},{t:'No. of stock out days of essential medicines',r:'CHO',aoc:'H',me:'ME H2.1',method:['RR']},{t:'No. of stock out days of essential diagnostic test',r:'CHO',aoc:'H',me:'ME H2.1',method:['RR']},{t:'No. of Yoga session conducted in month',r:'CHO',aoc:'H',me:'ME H2.1',method:['RR']},{t:'No of VHNDs conducted (for vulnerable population)',r:'CHO',aoc:'H',me:'ME H2.1',method:['RR']},{t:'Client Satisfaction Score (Patients)',r:'CHO',aoc:'H',me:'ME H4.1',method:['RR']},{t:'Client Satisfaction Score (Community)',r:'CHO',aoc:'H',me:'ME H4.1',method:['RR']}]},{day:23,aoc:'AE',service:'Pregnancy & Child Birth',title:'[Revision] Pregnancy & Child Birth — Verification & Documentation',task:'Revisit Pregnancy & Child Birth — verify all corrective actions implemented and documentation complete.',me:'ME A | ME E',aocTags:['AoC A+E — Revision'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Availability of functional ANC services  with minimum 4 ANC check-ups',r:'CHO',aoc:'A',me:'ME A1.1',method:['SI','RR']},{t:'First aid, referral  & follow up services for high risk pregnancies are provided',r:'CHO',aoc:'A',me:'ME A1.1',method:['SI','RR']},{t:'Facility provides and updates “Mother and Child Protection Card”',r:'CHO',aoc:'E',me:'ME E16.1',method:['RR','CI']},{t:'Facility ensures early registration & line listing of high risk ANC  cases',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'Clinical information & records of ANC is kept with Ayushman Arogya Mandir',r:'ANM',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'Staff has knowledge of calculating expected pregnancies in the area',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'Tracking of Missed and left out ANC',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'All pregnant women get ANC check-up as per recommended schedule',r:'CHO',aoc:'E',me:'ME E16.1',method:['SI','RR']},{t:'At ANC clinic, Pregnancy is confirmed by performing urine test',r:'CHO',aoc:'E',me:'ME E16.2',method:['RR']},{t:'Last menstrual period (LMP) is recorded and Expected date of Delivery (EDD) is calculated on first visit.',r:'CHO',aoc:'E',me:'ME E16.2',method:['SI','RR']},{t:'Comprehensive Obstetric history is recorded',r:'CHO',aoc:'E',me:'ME E16.2',method:['SI','RR']},{t:'Physical Examination & vitals  of Pregnant Women is done on every ANC visit',r:'CHO',aoc:'E',me:'ME E16.2',method:['RR']},{t:'Abdominal Examination is done as per protocol',r:'CHO',aoc:'E',me:'ME E16.2',method:['SI','RR']},{t:'Diagnostic  test for every pregnant women',r:'CHO',aoc:'E',me:'ME E16.3',method:['SI','RR']},{t:'Tetanus Toxoid (2 Dosages/ Booster) have been during ANC visits',r:'CHO',aoc:'E',me:'ME E16.3',method:['SI','RR']},{t:'Staff can recognize the cases, which would need referral to higher centre(FRU)',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is competent to identify Hypertension / Pregnancy Induced Hypertension',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is competent to identify Pre-Eclampsia',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is competent to classify anaemia according to Haemoglobin Level',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Staff is aware of prophylactic & Therapeutic dose of IFA &  progress is monitored',r:'CHO',aoc:'E',me:'ME E16.4',method:['SI','RR']},{t:'Pregnant women is counselled for planning and preparation for birth',r:'CHO',aoc:'E',me:'ME E16.5',method:['SI','CI']},{t:'Pregnant women is counselled recognize danger signs during pregnancy',r:'CHO',aoc:'E',me:'ME E16.5',method:['SI','CI']},{t:'Pregnant women is counselled diet, rest, breast feeding & family planning.',r:'CHO',aoc:'E',me:'ME E16.5',method:['SI','CI']}]},{day:24,aoc:'AE',service:'Neonatal & Infant Care',title:'[Revision] Neonatal & Infant Care — Verification & Documentation',task:'Revisit Neonatal & Infant Care — verify all corrective actions implemented and documentation complete.',me:'ME A | ME E',aocTags:['AoC A+E — Revision'],methods:['SI','RR','CI','OB'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Identification, primary management & prompt referral  of sick new born & infant',r:'CHO',aoc:'A',me:'ME A1.2',method:['SI','RR']},{t:'Availability of Immunization Services',r:'ANM',aoc:'A',me:'ME A1.2',method:['SI','RR']},{t:'CHO & CHW  are aware of danger signs of new born & infant',r:'CHO',aoc:'E',me:'ME E13.1',method:['SI','RR']},{t:'Primary management & prompt referral of sick new born & infants',r:'CHO',aoc:'E',me:'ME E13.1',method:['SI','RR']},{t:'Staff is aware of post natal care Counselling',r:'CHO',aoc:'E',me:'ME E13.1',method:['SI','CI']},{t:'Check for vaccines & diluents are kept as per the recommendation of guidelines',r:'OB',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Reconstituted vaccines are not used after recommended time',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Staff checks VVM level before using vaccines  and identify discard point',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI']},{t:'Parents are counselled for informing any untoward event of concern following vaccination',r:'CI',aoc:'E',me:'ME E13.2',method:['CI','OB']},{t:'Vaccinator is aware about how to manage any immediate serious reaction/anaphylaxis',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI']},{t:'Check the availability of anaphylaxis kit with ANM at session site',r:'ANM',aoc:'E',me:'ME E13.2',method:['OB']},{t:'Check adrenaline is not expired in kit',r:'ANM',aoc:'E',me:'ME E13.2',method:['OB']},{t:'Staff is aware of the shelf life of Vit A once it is opened and ensures it is not given after shelf life',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'ANM/CHW is aware segregation policy after completion of immunization session',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Staff is aware of  Open vial policy',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','OB']},{t:'Staff is aware of how to calculate the number of beneficiaries, quantity of vaccines & syringes',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Ayushman Arogya Mandir -SC maintain tracking bag/ tickler box',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Check Vaccinator is aware of different categories of AEFI',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Check person responsible for notifying & reporting of the AEFI is identified',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Process of reporting and route is communicated to all concerned',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI','RR']},{t:'Reporting  of AEFI cases is ensured by ANM',r:'ANM',aoc:'E',me:'ME E13.2',method:['RR']},{t:'Vaccinator is aware about how to prevent immunization error related reactions',r:'ANM',aoc:'E',me:'ME E13.2',method:['SI']}]},{day:25,aoc:'AE',service:'Childhood & Adolescent Health',title:'[Revision] Childhood & Adolescent Health — Verification & Documentation',task:'Revisit Childhood & Adolescent Health — verify all corrective actions implemented and documentation complete.',me:'ME A | ME E',aocTags:['AoC A+E — Revision'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Identification, primary management, referral & follow up services for Childhood ailments',r:'CHO',aoc:'A',me:'ME A1.3',method:['SI','RR']},{t:'Education, Counselling and referral  services for Adolescent health',r:'CHO',aoc:'A',me:'ME A1.3',method:['SI','CI']},{t:'Assessment for identification of ARI, diarrhoea, malnutrition and Other Illness',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Assessment for identification of possible serious bacterial infections among young infant (0-59 days) & children (2 -59 months)',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of diarrhoea  is  done as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of ARI  is  done as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of Possible serious bacterial infection as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Management of Malnutrition  is  done as per protocols',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','CI']},{t:'Screening, referral and follow up of children for anomalies, disabilities and developmental delays',r:'CHO',aoc:'E',me:'ME E13.3',method:['SI','RR']},{t:'Provision of education & counselling services for  adolescent',r:'CHO',aoc:'E',me:'ME E15.1',method:['SI','CI']},{t:'Services for treatment & referral  of common  RTI/STI\'s, Nutritional Anaemia & Menstrual disorders',r:'CHO',aoc:'E',me:'ME E15.1',method:['RR','CI']}]},{day:26,aoc:'AE',service:'Family Planning',title:'[Revision] Family Planning — Verification & Documentation',task:'Revisit Family Planning — verify all corrective actions implemented and documentation complete.',me:'ME A | ME E',aocTags:['AoC A+E — Revision'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Availability of family planning services',r:'CHO',aoc:'A',me:'ME A1.4',method:['SI','RR']},{t:'Education, Counselling and referral services for family planning services',r:'CI',aoc:'A',me:'ME A1.4',method:['SI','CI']},{t:'The client is given full information about family planning methods',r:'CHO',aoc:'E',me:'ME E14.1',method:['SI','RR']},{t:'Staff is aware of Method specific counselling approaches',r:'CHO',aoc:'E',me:'ME E14.1',method:['SI','CI']},{t:'Staff is aware of case selection criteria for family planning spacing  methods',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'Staff is aware of  options, indications & methods for administration for Oral Contraceptives',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'IUD insertion & follow up is done as per standard protocol',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'Injectable Contraceptives are given as per protocols',r:'CHO',aoc:'E',me:'ME E14.2',method:['SI','RR']},{t:'Staff is aware of case selection criteria for limiting mentors',r:'CHO',aoc:'E',me:'ME E14.3',method:['SI','RR']},{t:'AAM is supporting & encouraging the clients for post sterilization follow up',r:'CHO',aoc:'E',me:'ME E14.3',method:['SI','RR']}]},{day:27,aoc:'AE',service:'Management of Communicable Diseases',title:'[Revision] Management of Communicable Diseases — Verification & Documentation',task:'Revisit Management of Communicable Diseases — verify all corrective actions implemented and documentation complete.',me:'ME A | ME E',aocTags:['AoC A+E — Revision'],methods:['SI','RR','CI','OB'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Preventive & promotive services under NVBDCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Case detection, treatment, referral & follow up of cases under NVBDCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive measures  under NTEP',r:'CI',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Case detection, treatment, referral & follow up of cases under NTEP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive measures under NLEP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Case detection, treatment, referral & follow up of cases under NLEP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive services under NACP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Referral & follow up of cases under NACP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Preventive & promotive measures  under NVHCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','CI']},{t:'Case detection, treatment, referral & follow up of cases under NVHCP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Availability of functional services under IDSP/ IHIP',r:'CHO',aoc:'A',me:'ME A1.5',method:['SI','RR']},{t:'Identification, management and  referral of acute illness & minor aliments',r:'CHO',aoc:'A',me:'ME A1.6',method:['SI','RR']},{t:'Preventive & promotive measures  for acute illness',r:'CHO',aoc:'A',me:'ME A1.6',method:['SI','CI']},{t:'Primary care team  is aware of  vector born disease control strategies',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Case detection is done for Malaria',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of Malaria treatment protocols',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of Malaria referral protocols',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of diagnostic & management of dengue as per protocols',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'NVBDCP register & records are maintained',r:'ASHA',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Facilities have adequate stock of commodities & drugs',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI','RR']},{t:'Staff is aware of sign & symptoms of prevalent vector born diseases in area',r:'CHO',aoc:'E',me:'ME E10.1',method:['SI']},{t:'Identification of presumptive case  & their referral',r:'CHO',aoc:'E',me:'ME E10.2',method:['RR']},{t:'Ayushman Arogya Mandir support, supervision & manage presumptive, confirmed & on treatment cases including DR- TB patients',r:'CHO',aoc:'E',me:'ME E10.2',method:['RR','OB']},{t:'Staff is aware of follow up protocol after treatment completion',r:'CHO',aoc:'E',me:'ME E10.2',method:['SI','RR']},{t:'NTEP register & records are maintained',r:'CHO',aoc:'E',me:'ME E10.2',method:['RR']},{t:'Primary healthcare team  identify and ensure referral of suspected cases of Leprosy',r:'CHO',aoc:'E',me:'ME E10.3',method:['SI','RR']},{t:'NLEP register & records are maintained',r:'CHO',aoc:'E',me:'ME E10.3',method:['RR']},{t:'Facility provide awareness about leprosy & availability of its treatment',r:'CHO',aoc:'E',me:'ME E10.3',method:['SI','CI']},{t:'Ayushman Arogya Mandir-HSC is aware of their roles in NACP',r:'CHO',aoc:'E',me:'ME E10.4',method:['SI','RR']},{t:'Ayushman Arogya Mandir -SC has linkage for management of HIV/AIDS complications',r:'CHO',aoc:'E',me:'ME E10.4',method:['RR']},{t:'Staff is aware of promotional & supportive  activities done under NACP',r:'CHO',aoc:'E',me:'ME E10.4',method:['SI','RR']},{t:'Staff is aware of syndrome under surveillance in IDSP/IHIP',r:'CHO',aoc:'E',me:'ME E10.5',method:['SI','RR']},{t:'Check process to collect information in form S/ IHIP',r:'CHO',aoc:'E',me:'ME E10.5',method:['RR']},{t:'Check  Analysis & reporting of information for syndromic surveillance is done',r:'CHO',aoc:'E',me:'ME E10.5',method:['SI','RR']},{t:'Availability of diagnostic & treatment services',r:'CHO',aoc:'E',me:'ME E10.6',method:['RR']},{t:'Staff is aware of preventive measures for NVHCP',r:'CHO',aoc:'E',me:'ME E10.6',method:['SI','OB']}]},{day:28,aoc:'AE',service:'Management of Non-Communicable Diseases',title:'[Revision] Management of Non-Communicable Diseases — Verification & Documentation',task:'Revisit Management of Non-Communicable Diseases — verify all corrective actions implemented and documentation complete.',me:'ME A | ME E',aocTags:['AoC A+E — Revision'],methods:['SI','RR','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'Availability of services for Hypertension',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for Diabetes',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for Nonalcoholic fatty liver disease (NAFLD)',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of Services for  Cancers',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for respiratory diseases',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of services for Epilepsy',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','RR']},{t:'Availability of  services for  locally prevalent health diseases & substance abuse',r:'CHO',aoc:'A',me:'ME A1.7',method:['RR']},{t:'Preventive & promotive services under NCD',r:'CHO',aoc:'A',me:'ME A1.7',method:['SI','CI']},{t:'Ayushman Arogya Mandir undertakes  health promotion and disease prevention activities through Community level resources',r:'CI',aoc:'A',me:'ME A1.14',method:['RR','CI']},{t:'Provision of wellness services through Yoga and other activities',r:'CHO',aoc:'A',me:'ME A1.14',method:['SI','CI']},{t:'Provision of AYUSH services',r:'CHO',aoc:'A',me:'ME A1.14',method:['SI','RR']},{t:'Provision of counselling services for Eat Right',r:'CHO',aoc:'A',me:'ME A1.14',method:['SI','CI']},{t:'Staff is aware of process of population identification and referral for hypertension',r:'CHO',aoc:'E',me:'ME E11.1',method:['SI','RR']},{t:'CHO is  aware of sign & symptoms  of Hypertension',r:'CHO',aoc:'E',me:'ME E11.1',method:['SI']},{t:'Ayushman Arogya Mandir ensures frequency of follow up & supply of required medicines',r:'CHO',aoc:'E',me:'ME E11.1',method:['RR','CI']},{t:'Staff is aware of promotional & supportive  activities for Hypertension',r:'CHO',aoc:'E',me:'ME E11.1',method:['SI','CI']},{t:'Staff is aware of process of population identification and referral for diabetes',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','RR']},{t:'CHO is  aware of sign & symptoms  of diabetes',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI']},{t:'Ayushman Arogya Mandir ensures frequency of follow up & supply of required medicines',r:'CHO',aoc:'E',me:'ME E11.2',method:['RR','CI']},{t:'Check Patient is counselled about identification & immediate management hypoglycaemia',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','CI']},{t:'Ayushman Arogya Mandir is aware of  risk factors of  Nonalcoholic fatty liver disease (NAFLD)',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','RR']},{t:'Staff is aware of promotional & supportive  activities for diabetes',r:'CHO',aoc:'E',me:'ME E11.2',method:['SI','CI']},{t:'Check cancer screening services are provided through Ayushman Arogya Mandir',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','RR']},{t:'Staff is aware about sign & symptom of cervical cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI']},{t:'Staff is aware about sign & symptom of Breast cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI']},{t:'Staff is aware about sign & symptom of Oral Cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI']},{t:'Check with  staff about methodology followed for  cancer screening',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','RR']},{t:'Check CHW is aware of referral centre for all types of cancer',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','RR']},{t:'Staff is aware of promotional & supportive  activities for cancers',r:'CHO',aoc:'E',me:'ME E11.3',method:['SI','CI']},{t:'Confirmation and referral of cases for Tobacco/alcohol/ substance abuse',r:'CHO',aoc:'E',me:'ME E11.4',method:['SI','RR']},{t:'Promotional & supportive  activities for Tobacco/alcohol/ substance abuse',r:'CHO',aoc:'E',me:'ME E11.4',method:['SI','RR','CI']},{t:'Check Screening & referral  locally prevalent diseases',r:'CHO',aoc:'E',me:'ME E11.4',method:['SI','CI']},{t:'Check Ayushman Arogya Mandir is providing Yoga services',r:'ASHA',aoc:'E',me:'ME E11.5',method:['SI','RR']},{t:'Check Yoga sessions are conducted regularly',r:'CHO',aoc:'E',me:'ME E11.5',method:['RR','CI']},{t:'Check counselling of mother\'s for nutrition & hygiene maintenance under Eat right',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check staff counsel and guide the mother\'s about household preparation of complementary feeds',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about balanced diet',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about food fortification',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about Eat safe practices',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']},{t:'Check Primary  health care team generate awareness  in community about food safety',r:'CHO',aoc:'E',me:'ME E11.5',method:['SI','CI']}]},{day:29,aoc:'AE',service:'Mock Assessment',title:'Mock Assessment — Evidence Folder & Staff Drill',task:'Full mock assessment run-through. Simulate NQAS assessor visit across all Areas of Concern.',me:'All MEs',aocTags:['All Areas of Concern'],methods:['SI','RR','OB','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},cps:[{t:'SI drill: All staff can answer their role-specific questions',r:'CHO',aoc:'AE',me:'',method:['SI']},{t:'RR drill: All registers produced and verified within 2 minutes',r:'ANM',aoc:'AE',me:'',method:['RR']},{t:'OB drill: SC premises — zero violations found',r:'CHO',aoc:'AE',me:'',method:['OB']},{t:'Evidence folder complete for all 8 Areas of Concern',r:'CHO',aoc:'AE',me:'',method:['RR']},{t:'All gap closure actions confirmed complete',r:'CHO',aoc:'AE',me:'',method:['SI']},{t:'Block/PHC supervisor briefed on final readiness',r:'CHO',aoc:'AE',me:'',method:['SI']},{t:'Team confident and motivated — ready for NQAS assessment',r:'CHO',aoc:'AE',me:'',method:['SI']}]},{day:30,aoc:'Boss',service:'Grand Finale',title:'🏆 GRAND FINALE — Complete NQAS Mock Assessment',task:'🏆 Full simulation of NQAS assessment across all 8 Areas of Concern. Celebrate your preparation!',me:'All MEs',aocTags:['All Areas of Concern'],methods:['SI','RR','OB','CI'],roles:{prime:'CHO',support:['ANM','ASHA']},isBoss:true,cps:[{t:'AoC A (Service Provision) — verified and fully compliant',r:'CHO',aoc:'Boss',me:'',method:['SI']},{t:'AoC B (Patient Rights) — verified and fully compliant',r:'CHO',aoc:'Boss',me:'',method:['CI']},{t:'AoC C (Inputs) — verified and fully compliant',r:'CHO',aoc:'Boss',me:'',method:['OB']},{t:'AoC D (Support Services) — verified and fully compliant',r:'CHO',aoc:'Boss',me:'',method:['OB']},{t:'AoC E (Clinical Services) — verified and fully compliant',r:'CHO',aoc:'Boss',me:'',method:['SI']},{t:'AoC F (Infection Control) — verified and fully compliant',r:'CHO',aoc:'Boss',me:'',method:['OB']},{t:'AoC G (Quality Management) — verified and fully compliant',r:'CHO',aoc:'Boss',me:'',method:['RR']},{t:'AoC H (Outcome) — reviewed and documented',r:'CHO',aoc:'Boss',me:'',method:['RR']},{t:'Evidence folder complete for all 8 Areas of Concern',r:'CHO',aoc:'Boss',me:'',method:['RR']},{t:'🎉 Team celebrated — NQAS MasterClass FAST Programme Complete!',r:'CHO',aoc:'Boss',me:'',method:['SI']}]}];
@@ -2327,6 +2673,7 @@ const SC_VERIFIER_ROLES = ['CHO','MO']; // CHO and designated MO can verify
 
 // SC Roles (Sub-Centre specific)
 const SC_ROLES = [
+  {id:'General',label:'All Staff (General)',       icon:'👥', canVerify:false, requireName:false},
   {id:'CHO',    label:'Community Health Officer', icon:'🏥', canVerify:true,  requireName:false},
   {id:'ANM',    label:'ANM',                      icon:'💉', canVerify:false, requireName:true},
   {id:'ASHA',   label:'ASHA',                     icon:'🌸', canVerify:false, requireName:true},
@@ -2513,17 +2860,15 @@ async function adminSelectProg(id){ /* stubbed */ }
 
 // Admin card editor
 function aeGetDay(di){
-  const arr=getDaysArr(adminActiveProg?.id||'nqas_7A');
-  const base=arr[di];const edit=adminEdits[di];
-  if(!edit) return base;
-  return{...base,title:edit.title??base.title,task:edit.task??base.task,me:edit.me??base.me,methods:edit.methods??base.methods,cps:edit.cps??base.cps};
+  var arr = aeGetActiveArray ? aeGetActiveArray() : [];
+  return arr[di];
 }
 
-function buildAeDayStrip(){ /* stubbed */ }
 
-function aeOpenDay(){ /* stubbed */ }
 
-function aeRenderCPs(){ /* stubbed */ }
+
+
+
 
 function aeAddCP(){
   if(adminEditorDay===null) return;
@@ -2541,7 +2886,7 @@ async function aeDeleteCP(ci){
   if(!adminEdits[di])adminEdits[di]={};adminEdits[di].cps=cps;aeRenderCPs(di);
 }
 
-function aeSaveDay(){ /* stubbed */ }
+
 async function aeResetDay(){
   if(adminEditorDay===null) return;
   const di=adminEditorDay;
@@ -2864,7 +3209,7 @@ function renderCard(di){
         if(gr?.verified)btns=`<span style="color:var(--green-dk);font-size:10px;font-weight:800;">✓ Gap closed (${gr.score}/2)</span>`;
         else if(gr?.score!=null)btns=`<span style="font-size:10px;color:var(--amber-dk);font-weight:700;">Re-scored: ${gr.score}/2</span><button class="gap-re-verify-btn" onclick="gapReVerify(${di},${ci})"><i class="ti ti-shield-check" style="font-size:10px;"></i> Re-verify</button>`;
         else btns=`<button class="gap-retry-btn" onclick="gapRetry(${di},${ci})"><i class="ti ti-refresh" style="font-size:10px;"></i> Re-attempt</button>`;
-        return `<div class="gap-item"><div class="gap-cp-text">${cp.t}</div><div class="gap-score-row"><span class="gap-score-lbl">${s===0?'Zero':s===1?'Half':''} score · @${cp.r}</span>${btns}</div></div>`;
+        return `<div class="gap-item"><div class="gap-cp-text">${getCPText(cp)}</div><div class="gap-score-row"><span class="gap-score-lbl">${s===0?'Zero':s===1?'Half':''} score · @${cp.r}</span>${btns}</div></div>`;
       }).join('');
       gapHTML=`<div class="gap-section"><div class="gap-title"><i class="ti ti-alert-triangle" style="font-size:12px;"></i> ${gaps.length} Gap${gaps.length>1?'s':''} to Close</div>${items}</div>`;
     }
@@ -2973,12 +3318,13 @@ function cpItemHTML(di,ci,cp,d,c,isLocked){
     <div class="cp-top-row" onclick="${isLocked?'':'cycleCP('+di+','+ci+')'}">
       <div class="${boxCls}"><span class="cp-icon" style="font-size:10px;">${icon}</span></div>
       <div class="cp-body">
-        <div class="cp-text${struck}">${cp.t}</div>
-        <div class="cp-meta"><span class="cp-role">@${cp.r}</span>${cp.me?`<span>· ${cp.me}</span>`:''}</div>
+        <div class="cp-text${struck}">${getCPText(cp)}</div>
+        <div class="cp-meta"><span class="cp-role" style="${cp.r==='General'?'background:#F0FDF4;color:#15803D;':''}">${cp.r==='General'?'👥 All Staff':('@'+(cp.r||'All'))}</span>${cp.svc||cp.service?`<span class="cp-svc" style="background:#FDF4FF;color:#7C3AED;border-radius:5px;padding:1px 6px;font-size:9px;font-weight:700;">· ${cp.svc||cp.service}</span>`:''} ${cp.me?`<span>· ${cp.me}</span>`:''}</div>
         ${mov}
         ${scoreRow}
       </div>
       <button class="cp-help-btn" onclick="event.stopPropagation();showHelp(${di},${ci})" title="Assessment guidance">ⓘ</button>
+      ${cp.video ? `<button class="cp-video-btn" onclick="event.stopPropagation();showVideoPopup('${cp.video}')" title="${cp.video.match(/youtube\.com|youtu\.be|vimeo|\.mp4|\.webm/i)?'Watch training video':'Open resource link'}" style="background:${cp.video.match(/youtube\.com|youtu\.be|vimeo|\.mp4|\.webm/i)?'#EFF6FF':'#F0FDF4'};color:${cp.video.match(/youtube\.com|youtu\.be|vimeo|\.mp4|\.webm/i)?'#1D4ED8':'#15803D'};border:1.5px solid ${cp.video.match(/youtube\.com|youtu\.be|vimeo|\.mp4|\.webm/i)?'#BFDBFE':'#86EFAC'};border-radius:8px;padding:4px 9px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;">${cp.video.match(/youtube\.com|youtu\.be|vimeo|\.mp4|\.webm/i)?'▶ Video':'🔗 Link'}</button>` : ''}
     </div>
     <div class="help-drawer" id="help-${di}-${ci}"></div>
   </li>`;
@@ -3576,6 +3922,620 @@ function switchLoginTab(tab){
   else scHideSecondaryLogin();
 }
 
+
+
+// ══════════════════════════════════════════════════════
+function buildAeDayStrip(){
+  var strip=document.getElementById('ae-day-strip');
+  if(!strip||!adminActiveProg)return;
+  var arr=(window.TRACK_DAYS_MAP&&window.TRACK_DAYS_MAP['A'])||(window.DAYS_CHC_A)||(window.DAYS_PHC_A)||[];
+  strip.innerHTML='';
+  arr.forEach(function(d,di){
+    var edited=adminEdits[di];
+    var btn=document.createElement('button');
+    btn.className='ae-day-btn'+(di===adminEditorDay?' active':'')+(edited?' edited':'');
+    btn.textContent=d.day||(di+1);
+    btn.title=(d.title||'Day '+(di+1))+(edited?' (edited)':'');
+    btn.setAttribute('data-di',di);
+    btn.addEventListener('click',function(){aeOpenDay(parseInt(this.getAttribute('data-di')));});
+    strip.appendChild(btn);
+  });
+  var editCount=Object.keys(adminEdits).length;
+  var ec=document.getElementById('ae-edit-count');
+  if(ec)ec.textContent=editCount+' card'+(editCount!==1?'s':'')+' edited';
+}
+
+function aeOpenDay(di){
+  if(!adminActiveProg)return;
+  adminEditorDay=di;
+  var d=aeGetDay(di);
+  if(!d)return;
+  document.querySelectorAll('.ae-day-btn').forEach(function(b){
+    b.classList.toggle('active',parseInt(b.getAttribute('data-di'))===di);
+  });
+  var titleEl=document.getElementById('ae-day-title');
+  if(titleEl)titleEl.value=d.title||'';
+  var taskEl=document.getElementById('ae-day-task');
+  if(taskEl)taskEl.value=d.task||'';
+  var modEl=document.getElementById('ae-day-module');
+  if(modEl)modEl.textContent=(d.icon||'')+' '+(d.module||'')+'  ·  Day '+(d.day||(di+1));
+  var progEl=document.getElementById('ae-day-prog');
+  if(progEl)progEl.textContent=(d.prog||'')+'  ·  AoC: '+((d.aocTags||[]).join(', '));
+  var panel=document.getElementById('ae-editor-panel');
+  if(panel)panel.style.display='';
+  aeRenderCPs(di);
+}
+
+
+
+async function aeSaveDay(){
+  var di=adminEditorDay;
+  if(di===null||di===undefined){showToast('Select a day first.','err');return;}
+  var titleEl=document.getElementById('ae-day-title');
+  var taskEl=document.getElementById('ae-day-task');
+  if(!adminEdits[di])adminEdits[di]={};
+  if(titleEl)adminEdits[di].title=titleEl.value;
+  if(taskEl)adminEdits[di].task=taskEl.value;
+  var progId=adminActiveProg?(adminActiveProg.id||String(adminActiveProg)):'default';
+  try{localStorage.setItem('admin_edits_'+progId,JSON.stringify(adminEdits));}catch(e){}
+  if(typeof fbSet==='function'){
+    var ok=await fbSet('shared/edits/'+progId,adminEdits);
+    showToast(ok?'Day '+(di+1)+' saved to Firebase ✓':'Saved locally. Firebase sync failed.', ok?'ok':'err');
+  }else{
+    showToast('Day '+(di+1)+' saved locally ✓','ok');
+  }
+  buildAeDayStrip();
+}
+
+function aeOpenProgramme(prog){
+  adminActiveProg=prog;
+  adminEditorDay=null;
+  var progId=prog?(prog.id||String(prog)):'default';
+  try{
+    var saved=localStorage.getItem('admin_edits_'+progId);
+    adminEdits=saved?JSON.parse(saved):{};
+  }catch(e){adminEdits={};}
+  var sec=document.getElementById('admin-editor-section');
+  if(sec)sec.style.display='';
+  var panel=document.getElementById('ae-editor-panel');
+  if(panel)panel.style.display='none';
+  buildAeDayStrip();
+}
+
+// toggleAdminEditor defined in v3 editor below
+
+
+
+// ── Admin Card Editor v3 (SC) ──────────────────────────────
+var _AE_PROGS  = ['A', 'B', 'C', 'D'];
+var _AE_LABELS = ['7A (30d)', '7B (30d)', '12A (60d)', '12B (60d)'];
+
+function aeGetActiveArray(){
+  // Direct variable references — not window. to avoid timing issues
+  try{
+    var progMap = {
+      'A': typeof DAYS_7A  !=='undefined' ? DAYS_7A  : null,
+      'B': typeof DAYS_7B  !=='undefined' ? DAYS_7B  : null,
+      'C': typeof DAYS_12A !=='undefined' ? DAYS_12A : null,
+      'D': typeof DAYS_12B !=='undefined' ? DAYS_12B : null,
+    };
+    var key = adminActiveProg || 'A';
+    return progMap[key] || progMap['A'] || progMap['B'] || [];
+  }catch(e){ return []; }
+}
+
+function buildAeDayStrip(){
+  var strip = document.getElementById('ae-day-strip');
+  var selRow = document.getElementById('ae-prog-sel-row');
+
+  // Rebuild programme selector
+  if(selRow){
+    selRow.innerHTML = '';
+    _AE_PROGS.forEach(function(p,i){
+      var active = (adminActiveProg||_AE_PROGS[0]) === p;
+      var b = document.createElement('button');
+      b.style.cssText = 'padding:4px 12px;border-radius:8px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;border:1.5px solid '+(active?'var(--green)':'var(--br)')+';background:'+(active?'var(--green)':'var(--bgc)')+';color:'+(active?'#fff':'var(--t2)')+';white-space:nowrap;transition:all 0.1s;';
+      b.textContent = _AE_LABELS[i];
+      b.setAttribute('data-prog', p);
+      b.addEventListener('click', function(){
+        adminActiveProg = this.getAttribute('data-prog');
+        adminEditorDay  = null;
+        var panel = document.getElementById('ae-editor-panel');
+        if(panel) panel.style.display = 'none';
+        buildAeDayStrip();
+      });
+      selRow.appendChild(b);
+    });
+  }
+
+  if(!adminActiveProg) adminActiveProg = _AE_PROGS[0];
+
+  var arr = aeGetActiveArray();
+  if(!strip) return;
+
+  if(!arr || arr.length === 0){
+    // Retry once after 300ms if arrays not loaded yet
+    if(!strip._retried){
+      strip._retried = true;
+      strip.innerHTML = '<div style="padding:12px 14px;color:var(--t3);font-size:12px;">Loading days...</div>';
+      setTimeout(buildAeDayStrip, 300);
+    } else {
+      strip.innerHTML = '<div style="padding:12px 14px;color:#DC2626;font-size:12px;font-weight:600;">⚠ Days not found. Please refresh the page and try again.</div>';
+      strip._retried = false;
+    }
+    return;
+  }
+
+  strip.innerHTML = '';
+  arr.forEach(function(d, di){
+    var key  = adminActiveProg + '_' + di;
+    var edited = !!adminEdits[key];
+    var isActive = di === adminEditorDay;
+    var b = document.createElement('button');
+    b.style.cssText = 'min-width:34px;height:30px;border-radius:7px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.1s;border:1.5px solid '
+      + (isActive ? 'var(--green)' : (edited ? '#F59E0B' : 'var(--br)'))
+      + ';background:' + (isActive ? 'var(--green)' : (edited ? '#FFF7ED' : 'var(--bgs)'))
+      + ';color:' + (isActive ? '#fff' : (edited ? '#B45309' : 'var(--t2)')) + ';';
+    b.textContent  = d.day || (di + 1);
+    b.title = (d.title || ('Day '+(di+1))) + (edited?' ✏':'');
+    b.setAttribute('data-di', di);
+    b.addEventListener('click', function(){ aeOpenDay(parseInt(this.getAttribute('data-di'))); });
+    strip.appendChild(b);
+  });
+
+  var edited = Object.keys(adminEdits).filter(function(k){ return k.indexOf(adminActiveProg+'_') === 0; }).length;
+  var ec = document.getElementById('ae-edit-count');
+  if(ec) ec.textContent = edited + ' card'+(edited!==1?'s':'')+' edited in this track';
+}
+
+function aeOpenDay(di){
+  if(!adminActiveProg) adminActiveProg = _AE_PROGS[0];
+  adminEditorDay = di;
+  var arr = aeGetActiveArray();
+  var d   = arr[di];
+  if(!d){ console.warn('aeOpenDay: no day at',di,'in',adminActiveProg); return; }
+
+  buildAeDayStrip(); // refresh strip highlight
+
+  var key    = adminActiveProg + '_' + di;
+  var edited = adminEdits[key] || {};
+
+  var t = document.getElementById('ae-day-title');
+  if(t) t.value = edited.title !== undefined ? edited.title : (d.title||'');
+  var tk = document.getElementById('ae-day-task');
+  if(tk) tk.value = edited.task !== undefined ? edited.task : (d.task||'');
+  var mod = document.getElementById('ae-day-module');
+  if(mod) mod.textContent = (d.icon||'')+ ' ' +(d.module||'') + '  ·  Day '+(d.day||(di+1));
+  var pg  = document.getElementById('ae-day-prog');
+  if(pg)  pg.textContent  = (d.prog||adminActiveProg)+'  ·  AoC: '+((d.aocTags||[]).join(', '));
+
+  var panel = document.getElementById('ae-editor-panel');
+  if(panel) panel.style.display = '';
+  aeRenderCPs(di);
+}
+
+// aeRenderCPs — see enhanced version below
+
+
+function aeEnsure(di){
+  if(di === null || di === undefined) di = _aeDiU;
+  var key = adminActiveProg+'_'+di;
+  if(!adminEdits[key]){
+    var arr = aeGetActiveArray(); var d = arr[di];
+    adminEdits[key] = { cps: JSON.parse(JSON.stringify(d?d.cps||[]:[]) ) };
+    _aeCps = adminEdits[key].cps;
+  }
+}
+
+function aeAddCP(){
+  var di = adminEditorDay;
+  if(di===null||di===undefined){showToast('Select a day first.','err');return;}
+  aeEnsure(di);
+  var key = adminActiveProg+'_'+di;
+  adminEdits[key].cps.push({
+    t:'New checkpoint — enter text here.',
+    r:'CHO', aoc:'A', svc:'', method:['SI','RR'], video:'', me:''
+  });
+  aeRenderCPs(di);
+}
+
+function aeDeleteCP(ci){
+  var di = adminEditorDay;
+  if(di===null||di===undefined) return;
+  aeEnsure(di);
+  adminEdits[adminActiveProg+'_'+di].cps.splice(ci,1);
+  aeRenderCPs(di);
+}
+
+function aeResetDay(){
+  var di = adminEditorDay;
+  if(di===null||di===undefined){showToast('Select a day first.','err');return;}
+  delete adminEdits[adminActiveProg+'_'+di];
+  try{localStorage.setItem('adminEdits_v2',JSON.stringify(adminEdits));}catch(e){}
+  aeOpenDay(di); buildAeDayStrip();
+  showToast('Day '+(di+1)+' reset to original','ok');
+}
+
+async function aeSaveDay(){
+  var di = adminEditorDay;
+  if(di===null||di===undefined){showToast('Select a day first.','err');return;}
+  var key = adminActiveProg+'_'+di;
+  aeEnsure(di);
+  var tEl=document.getElementById('ae-day-title');
+  var tkEl=document.getElementById('ae-day-task');
+  if(tEl)  adminEdits[key].title = tEl.value;
+  if(tkEl) adminEdits[key].task  = tkEl.value;
+  try{localStorage.setItem('adminEdits_v2',JSON.stringify(adminEdits));}catch(e){}
+  if(typeof fbSet==='function'){
+    var ok = await fbSet('shared/admin_edits',adminEdits);
+    showToast(ok?'✓ Day '+(di+1)+' saved to Firebase':'Saved locally only',ok?'ok':'err');
+  }else{
+    showToast('✓ Day '+(di+1)+' saved locally','ok');
+  }
+  buildAeDayStrip();
+}
+
+function toggleAdminEditor(){
+  var sec = document.getElementById('admin-editor-section');
+  if(!sec){ showToast('Editor not available.','err'); return; }
+  var isHidden = sec.style.display === 'none' || sec.style.display === '';
+  if(isHidden){
+    sec.style.display = 'block';
+    try{ var s=localStorage.getItem('adminEdits_v2'); if(s) adminEdits=JSON.parse(s); }catch(e){}
+    if(!adminActiveProg) adminActiveProg = _AE_PROGS[0];
+    setTimeout(function(){
+      sec.scrollIntoView({behavior:'smooth', block:'nearest'});
+      buildAeDayStrip();
+    }, 100);
+  } else {
+    sec.style.display = 'none';
+  }
+}
+
+
+// ── SC Enhanced Card Editor ────────────────────────────────────
+var _SC_ROLES    = ['General', 'CHO', 'ANM', 'ASHA', 'MPW', 'MO'];
+var _SC_SERVICES = ['Pregnancy & Child Birth', 'Neonatal & Infant Care', 'Childhood & Adolescent Health', 'Family Planning', 'Elderly & Pallative Care', 'Management of Communicable Diseases', 'Management of Non-Communicable Diseases', 'Mental Health', 'Oral Health Care', 'Care of Common Ophthalmic and ENT', 'Emergency', 'Patient Rights', 'Drugs & Diagnostics', 'Drugs & Equipment', 'Infrastructure', 'Human Resources', 'Records & MIS', 'QI System', 'Patient Safety', 'Outcomes', 'Hand Hygiene', 'BMW & Housekeeping', 'Sterilisation'];
+var _SC_AOC      = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+var _SC_METHODS  = ['SI', 'RR', 'OB', 'CI'];
+
+
+
+// ── Video popup for staff (show play button if video link exists) ──
+// ── Media/Link handler ─────────────────────────────────────────
+function isVideoUrl(url){
+  if(!url) return false;
+  return url.match(/youtube\.com|youtu\.be|vimeo\.com|\.mp4|\.webm|\.ogg/i);
+}
+
+function showVideoPopup(url){
+  if(!url) return;
+  // Non-video URLs open in new tab
+  if(!isVideoUrl(url)){
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.onclick=function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+  var box=document.createElement('div');
+  box.style.cssText='background:#000;border-radius:16px;overflow:hidden;width:min(92vw,840px);position:relative;';
+  var embedUrl=url.replace('watch?v=','embed/').replace('youtu.be/','www.youtube.com/embed/').replace('vimeo.com/','player.vimeo.com/video/');
+  if(embedUrl.match(/youtube|vimeo/i)){
+    var iframe=document.createElement('iframe');
+    iframe.src=embedUrl+(embedUrl.indexOf('?')>=0?'&':'?')+'autoplay=1';
+    iframe.style.cssText='width:100%;aspect-ratio:16/9;border:none;display:block;';
+    iframe.allow='autoplay;encrypted-media;fullscreen';
+    iframe.allowFullscreen=true;
+    box.appendChild(iframe);
+  } else {
+    var vid=document.createElement('video');
+    vid.src=url; vid.controls=true; vid.autoplay=true;
+    vid.style.cssText='width:100%;display:block;max-height:80vh;';
+    box.appendChild(vid);
+  }
+  var closeBtn=document.createElement('button');
+  closeBtn.style.cssText='position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.6);color:#fff;border:1.5px solid rgba(255,255,255,0.3);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;';
+  closeBtn.textContent='✕ Close';
+  closeBtn.onclick=function(){ document.body.removeChild(overlay); };
+  box.appendChild(closeBtn);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+
+// Active CP data for editor (module-level so renderFiltered can access)
+var _aeCps  = [];
+var _aeDiU  = null;
+
+function aeRenderCPs(di){
+  var cont = document.getElementById('ae-cp-list');
+  if(!cont) return;
+  if(!adminActiveProg) adminActiveProg = _AE_PROGS[0];
+
+  var diU = (di !== undefined && di !== null) ? di : adminEditorDay;
+  if(diU === null || diU === undefined){
+    cont.innerHTML = '<div style="padding:14px;color:#94A3B8;font-size:12px;">↑ Click a day number above to edit its checkpoints.</div>';
+    return;
+  }
+
+  var arr = aeGetActiveArray();
+  var d   = arr[diU];
+  if(!d){
+    cont.innerHTML = '<div style="padding:14px;color:#EF4444;font-size:12px;">Day not found at index '+diU+'.</div>';
+    return;
+  }
+
+  // Store active CPs at module level
+  var key = adminActiveProg + '_' + diU;
+  _aeDiU  = diU;
+  if(adminEdits[key] && adminEdits[key].cps){
+    _aeCps = adminEdits[key].cps;
+  } else {
+    _aeCps = JSON.parse(JSON.stringify(d.cps || []));
+  }
+
+  cont.innerHTML =
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;">'
+    + '<span style="font-size:10px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;padding:4px 0;margin-right:4px;">Filter:</span>'
+    + '<select id="ae-filter-role" onchange="aeFilterCPs()" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:4px 8px;font-size:11px;font-family:inherit;">'
+    + '<option value="">All Roles</option>'
+    + _SC_ROLES.map(function(r){ return '<option>'+r+'</option>'; }).join('')
+    + '</select>'
+    + '<select id="ae-filter-aoc" onchange="aeFilterCPs()" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:4px 8px;font-size:11px;font-family:inherit;">'
+    + '<option value="">All AoC</option>'
+    + _SC_AOC.map(function(a){ return '<option value="'+a+'">AoC '+a+'</option>'; }).join('')
+    + '</select>'
+    + '<span id="ae-cp-count" style="font-size:11px;color:#64748B;font-weight:600;padding:4px 0;margin-left:auto;"></span>'
+    + '</div>'
+    + '<div id="ae-cp-items"></div>';
+
+  aeFilterCPs();
+}
+
+function aeFilterCPs(){
+  var list = document.getElementById('ae-cp-items');
+  if(!list) return;
+  var roleF = (document.getElementById('ae-filter-role')||{}).value || '';
+  var aocF  = (document.getElementById('ae-filter-aoc') ||{}).value || '';
+  list.innerHTML = '';
+  var shown = 0;
+
+  _aeCps.forEach(function(cp, ci){
+    if(roleF && (cp.r||'') !== roleF) return;
+    if(aocF  && (cp.aoc||'') !== aocF)  return;
+    shown++;
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border:1.5px solid #E2E8F0;border-radius:12px;padding:12px 14px;margin-bottom:10px;';
+
+    // ── Row 1: AoC + Role + Service + Delete ──
+    var r1 = '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px;">';
+
+    r1 += '<select data-field="aoc" data-ci="'+ci+'" onchange="aeUpdateField(this)" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:3px 7px;font-size:11px;font-weight:800;font-family:inherit;background:#ECFDF5;color:#065F46;cursor:pointer;">'
+      + _SC_AOC.map(function(a){ return '<option value="'+a+'"'+(cp.aoc===a?' selected':'')+'>AoC '+a+'</option>'; }).join('')
+      + '</select>';
+
+    r1 += '<select data-field="r" data-ci="'+ci+'" onchange="aeUpdateField(this)" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:3px 7px;font-size:11px;font-weight:700;font-family:inherit;background:#EFF6FF;color:#1D4ED8;cursor:pointer;">'
+      + '<option value="">Role…</option>'
+      + _SC_ROLES.map(function(r){ return '<option value="'+r+'"'+(cp.r===r?' selected':'')+'>'+(r==='General'?'👥 General (All Staff)':r)+'</option>'; }).join('')
+      + '</select>';
+
+    r1 += '<select data-field="svc" data-ci="'+ci+'" onchange="aeUpdateField(this)" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:3px 7px;font-size:11px;font-weight:600;font-family:inherit;background:#FDF4FF;color:#7C3AED;cursor:pointer;flex:1;min-width:140px;">'
+      + '<option value="">Service…</option>'
+      + _SC_SERVICES.map(function(s){ return '<option value="'+s+'"'+((cp.svc===s||cp.service===s)?' selected':'')+'>'+s+'</option>'; }).join('')
+      + '</select>';
+
+    r1 += '<button onclick="aeDeleteCPByIndex('+ci+')" style="background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:7px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0;">✕</button>';
+    r1 += '</div>';
+
+    // ── Row 2: Checkpoint text EN + Hindi ──
+    var enText = (cp.t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var hiText = (cp.hi||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var r2 = '<div style="margin-bottom:6px;">'
+      + '<label style="font-size:9px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:3px;">English Text</label>'
+      + '<textarea data-field="t" data-ci="'+ci+'" onchange="aeUpdateField(this)" oninput="aeUpdateField(this)"'
+      + ' style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;min-height:48px;color:#0F172A;box-sizing:border-box;">'
+      + enText
+      + '</textarea></div>'
+      + '<div style="margin-bottom:8px;">'
+      + '<label style="font-size:9px;font-weight:800;color:#F59E0B;text-transform:uppercase;letter-spacing:0.4px;display:block;margin-bottom:3px;">हिंदी अनुवाद (Hindi)</label>'
+      + '<textarea data-field="hi" data-ci="'+ci+'" onchange="aeUpdateField(this)" oninput="aeUpdateField(this)"'
+      + ' placeholder="यहाँ हिंदी अनुवाद लिखें..."'
+      + ' style="width:100%;border:1.5px solid #FDE68A;border-radius:8px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;min-height:48px;color:#92400E;background:#FFFBEB;box-sizing:border-box;">'
+      + hiText
+      + '</textarea></div>';
+        // ── Row 3: Methods + Video ──
+    var methods = cp.method || [];
+    var r3 = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      + '<span style="font-size:10px;font-weight:700;color:#94A3B8;">Method:</span>';
+    _SC_METHODS.forEach(function(m){
+      var chk = methods.indexOf(m)>=0 ? 'checked' : '';
+      var activeBg = chk ? '#EFF6FF' : '#fff';
+      var activeCol = chk ? '#1D4ED8' : '#94A3B8';
+      r3 += '<label style="display:flex;align-items:center;gap:3px;font-size:10px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px;border:1.5px solid #E2E8F0;background:'+activeBg+';color:'+activeCol+';">'
+        + '<input type="checkbox" value="'+m+'" data-ci="'+ci+'" '+chk+' onchange="aeUpdateMethod(this)" style="width:11px;height:11px;cursor:pointer;"> '+m+'</label>';
+    });
+    r3 += '<span style="font-size:10px;font-weight:700;color:#94A3B8;margin-left:auto;">🎬 Video:</span>'
+      + '<input type="url" data-field="video" data-ci="'+ci+'" onchange="aeUpdateField(this)" placeholder="YouTube or video URL…" value="'+(cp.video||'')+'" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:4px 9px;font-size:11px;font-family:inherit;min-width:200px;flex:1;">';
+    r3 += '</div>';
+
+    card.innerHTML = r1 + r2 + r3;
+    list.appendChild(card);
+  });
+
+  if(shown === 0){
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:#94A3B8;font-size:12px;">'
+      + (_aeCps.length === 0 ? 'No checkpoints yet. Click + Add Checkpoint.' : 'No checkpoints match the filter.')
+      + '</div>';
+  }
+  var cc = document.getElementById('ae-cp-count');
+  if(cc) cc.textContent = shown+' of '+_aeCps.length+' checkpoints';
+}
+
+function aeUpdateField(el){
+  var ci    = parseInt(el.getAttribute('data-ci'));
+  var field = el.getAttribute('data-field');
+  var val   = el.value;
+  aeEnsure(_aeDiU);
+  if(adminEdits[adminActiveProg+'_'+_aeDiU].cps[ci] !== undefined){
+    adminEdits[adminActiveProg+'_'+_aeDiU].cps[ci][field] = val;
+    _aeCps[ci][field] = val;
+  }
+}
+
+function aeUpdateMethod(cb){
+  var ci = parseInt(cb.getAttribute('data-ci'));
+  aeEnsure(_aeDiU);
+  var card = cb.closest('div');
+  var methods = [];
+  card.querySelectorAll('input[type=checkbox]').forEach(function(c){
+    if(c.checked) methods.push(c.value);
+    // Update label styling
+    var lbl = c.parentElement;
+    lbl.style.background = c.checked ? '#EFF6FF' : '#fff';
+    lbl.style.color = c.checked ? '#1D4ED8' : '#94A3B8';
+  });
+  if(adminEdits[adminActiveProg+'_'+_aeDiU].cps[ci]){
+    adminEdits[adminActiveProg+'_'+_aeDiU].cps[ci].method = methods;
+    _aeCps[ci].method = methods;
+  }
+}
+
+function aeDeleteCPByIndex(ci){
+  aeEnsure(_aeDiU);
+  _aeCps.splice(ci, 1);
+  adminEdits[adminActiveProg+'_'+_aeDiU].cps = _aeCps.slice();
+  aeFilterCPs(); // re-render without full rebuild
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// HINDI LANGUAGE TOGGLE SYSTEM
+// ══════════════════════════════════════════════════════════════
+var _appLang = 'en';
+
+var HINDI_UI = {
+  'Staff Login':'स्टाफ लॉगिन','Facility ID':'सुविधा आईडी','Mobile Number':'मोबाइल नंबर',
+  'Password':'पासवर्ड','Welcome back':'वापस स्वागत है','Day':'दिन',
+  'Start date not set':'प्रारंभ तिथि निर्धारित नहीं','days remaining':'दिन शेष',
+  'programme complete':'कार्यक्रम पूर्ण','Quest Board':'क्वेस्ट बोर्ड',
+  'Hide Guide':'गाइड छुपाएं','Show Guide':'गाइड दिखाएं','Logout':'लॉग आउट',
+  'Checkpoints':'चेकपॉइंट','Staff Interview':'स्टाफ साक्षात्कार',
+  'Record Review':'अभिलेख समीक्षा','Observation':'अवलोकन',
+  'Client Interview':'रोगी साक्षात्कार','Mark as done':'पूर्ण के रूप में चिह्नित करें',
+  'Not applicable':'लागू नहीं','Verified':'सत्यापित',
+  'Submit for verification':'सत्यापन के लिए जमा करें',
+  'Service Provision':'सेवा प्रावधान','Patient Rights':'रोगी अधिकार',
+  'Inputs':'इनपुट / संसाधन','Support Services':'सहायक सेवाएं',
+  'Clinical Services':'नैदानिक सेवाएं','Infection Control':'संक्रमण नियंत्रण',
+  'Quality Management':'गुणवत्ता प्रबंधन','Outcome Indicators':'परिणाम संकेतक',
+  'Pregnancy & Child Birth':'गर्भावस्था और प्रसव','Neonatal & Infant Care':'नवजात और शिशु देखभाल',
+  'Family Planning':'परिवार नियोजन','Immunization':'टीकाकरण',
+  'Emergency':'आपातकाल','Boss Battle':'बॉस बैटल','Grand Finale':'ग्रैंड फिनाले',
+  'Mock Assessment':'मॉक मूल्यांकन','Consolidation':'समेकन',
+  'Mobile not registered. Contact your CHO.':'मोबाइल पंजीकृत नहीं। अपने CHO से संपर्क करें।',
+  'Incorrect password.':'पासवर्ड गलत है।',
+};
+
+function t(key){ return (_appLang==='hi' && HINDI_UI[key]) ? HINDI_UI[key] : key; }
+
+function getCPText(cp){
+  if(!cp) return '';
+  if(_appLang==='hi' && cp.hi) return cp.hi;
+  return cp.t || '';
+}
+
+function setLang(lang){
+  _appLang = lang;
+  try{ localStorage.setItem('nqas_lang', lang); }catch(e){}
+  document.querySelectorAll('#lang-en-btn').forEach(function(b){
+    b.style.background = lang==='en' ? 'rgba(255,255,255,0.9)' : 'transparent';
+    b.style.color = lang==='en' ? '#1E6B5E' : 'rgba(255,255,255,0.6)';
+  });
+  document.querySelectorAll('#lang-hi-btn').forEach(function(b){
+    b.style.background = lang==='hi' ? '#F59E0B' : 'transparent';
+    b.style.color = lang==='hi' ? '#fff' : 'rgba(255,255,255,0.6)';
+  });
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var key = el.getAttribute('data-i18n');
+    el.textContent = (lang==='hi' && HINDI_UI[key]) ? HINDI_UI[key] : key;
+  });
+  if(typeof showToast==='function')
+    showToast(lang==='hi' ? 'हिंदी भाषा चुनी गई ✓' : 'English selected ✓', 'ok');
+  // Re-render cards if in card view
+  try{ if(typeof wsRenderBody==='function') wsRenderBody(); }catch(e){}
+}
+
+function initLang(){
+  try{ _appLang = localStorage.getItem('nqas_lang') || 'en'; }catch(e){ _appLang='en'; }
+  setTimeout(function(){ setLang(_appLang); }, 300);
+}
+window.addEventListener('load', initLang);
+
+
+
 </script>
+
+<div class="report-modal-overlay" id="rpt-filter-modal">
+  <div class="report-modal" style="max-width:560px;padding:0;overflow:hidden;">
+    <!-- Header -->
+    <div id="rpt-header" style="background:var(--teal);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#fff;font-family:'Poppins',sans-serif;" id="rpt-title">Facility Report</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);">Set filters then preview or download</div>
+      </div>
+      <button onclick="closeReportModal()" style="background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:20px;max-height:70vh;overflow-y:auto;">
+      <!-- Facility filter -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:10px;font-weight:800;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Facilities</label>
+        <div id="rpt-fac-list" style="display:flex;flex-direction:column;gap:5px;max-height:150px;overflow-y:auto;border:1.5px solid var(--br);border-radius:10px;padding:8px 10px;background:var(--bgs);"></div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <button onclick="rptSelectAllFacs(true)" style="font-size:10px;font-weight:700;color:var(--teal);border:1px solid var(--teal);border-radius:6px;padding:3px 10px;background:transparent;cursor:pointer;font-family:inherit;">Select All</button>
+          <button onclick="rptSelectAllFacs(false)" style="font-size:10px;font-weight:700;color:var(--t3);border:1px solid var(--br);border-radius:6px;padding:3px 10px;background:transparent;cursor:pointer;font-family:inherit;">Clear</button>
+        </div>
+      </div>
+
+      <!-- Programme filter -->
+      <div style="margin-bottom:16px;" id="rpt-prog-row">
+        <label style="font-size:10px;font-weight:800;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Programme</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="rpt-prog-btns">
+          <button class="rpt-filter-btn active" onclick="rptToggleProg(this,'')">All</button>
+          <button class="rpt-filter-btn" onclick="rptToggleProg(this,'nqas_7A')">7A</button>
+          <button class="rpt-filter-btn" onclick="rptToggleProg(this,'nqas_7B')">7B</button>
+          <button class="rpt-filter-btn" onclick="rptToggleProg(this,'nqas_12A')">12A</button>
+          <button class="rpt-filter-btn" onclick="rptToggleProg(this,'nqas_12B')">12B</button>
+        </div>
+      </div>
+
+      <!-- Role filter -->
+      <div style="margin-bottom:16px;display:none;" id="rpt-role-row">
+        <label style="font-size:10px;font-weight:800;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Role</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="rpt-role-btns">
+          <button class="rpt-filter-btn active" onclick="rptToggleRole(this,'')">All Roles</button>
+          <button class="rpt-filter-btn" onclick="rptToggleRole(this,'CHO')">CHO</button>
+          <button class="rpt-filter-btn" onclick="rptToggleRole(this,'ANM')">ANM</button>
+          <button class="rpt-filter-btn" onclick="rptToggleRole(this,'ASHA')">ASHA</button>
+          <button class="rpt-filter-btn" onclick="rptToggleRole(this,'MPW')">MPW</button>
+          <button class="rpt-filter-btn" onclick="rptToggleRole(this,'MO')">MO</button>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div id="rpt-preview" style="background:var(--bgs);border-radius:10px;padding:11px 14px;margin-bottom:16px;border:1px solid var(--br);font-size:12px;color:var(--t1);line-height:1.6;">
+        Select filters above to preview what will be included.
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;">
+        <button onclick="rptGenerate('preview')" style="flex:1;background:var(--teal);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">👁 Preview</button>
+        <button onclick="rptGenerate('print')" style="flex:1;background:var(--teal-dk,#0F4C3A);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">🖨 Print PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
