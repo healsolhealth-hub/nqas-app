@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <title>HealSol Academy - NQAS MasterClass - FAST</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@700;800;900&display=swap" rel="stylesheet"/>
 <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" rel="stylesheet"/>
@@ -935,6 +936,22 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
   background:var(--org,#F59E0B);color:#fff;border-color:var(--org,#F59E0B);
 }
 
+/* ══ PAYWALL / SUBSCRIPTION ════════════════════════════════════ */
+.upgrade-card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+.upgrade-hd{background:linear-gradient(135deg,#7C2D12,#B45309);padding:28px 22px;text-align:center;color:#fff;}
+.upgrade-body{padding:22px;}
+.pkg-item{display:flex;align-items:center;gap:10px;padding:12px;border:1.5px solid var(--br);border-radius:12px;margin-bottom:8px;cursor:pointer;}
+.pkg-item.checked{border-color:var(--teal);background:var(--teal-lt);}
+.pricing-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--br);}
+.pricing-row input{width:100px;border:1.5px solid var(--br);border-radius:8px;padding:6px 9px;font-size:12px;font-family:inherit;}
+.rm-preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9990;display:none;align-items:center;justify-content:center;padding:20px;}
+.rm-preview-overlay.open{display:flex;}
+.rm-preview-box{background:#fff;border-radius:16px;width:100%;max-width:900px;height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.25);}
+.rm-preview-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--br);background:var(--bgs,#F9FAFB);}
+.rm-preview-head-title{font-size:13px;font-weight:800;color:var(--t1);}
+.rm-preview-frame{flex:1;border:none;width:100%;background:#fff;}
+.rm-cancel{border:1.5px solid var(--br);border-radius:20px;padding:7px 16px;font-size:11px;font-weight:800;cursor:pointer;background:transparent;color:var(--t2);font-family:inherit;}
+
 </style>
 </head>
 <body>
@@ -997,6 +1014,12 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
       <i class="ti ti-rocket" style="font-size:15px;"></i> Enter SC App
     </button>
     <div class="lc-note">Your Facility ID and mobile are registered by your CHO. Default password is last 4 digits of your mobile number.</div>
+    <button onclick="phcOpenDemoSignup()" style="width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1.5px dashed var(--teal,#1E6B5E);background:rgba(30,107,94,0.08);color:var(--teal,#1E6B5E);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <i class="ti ti-rocket" style="font-size:14px;"></i> New facility? Start a free 7-day demo
+    </button>
+    <button onclick="phcOpenLeadModal()" style="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--br);background:transparent;color:var(--t2);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <i class="ti ti-building-community" style="font-size:13px;"></i> District / Bulk enrollment? Contact us
+    </button>
   </div>
 
   <!-- FACILITY ADMIN LOGIN (hidden, slide-in) -->
@@ -1271,6 +1294,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
         <div style="font-size:26px;font-weight:900;color:var(--teal-dk);font-family:'Poppins',sans-serif;" id="sc-master-avg">—</div>
         <div style="font-size:10px;color:var(--t3);font-weight:700;">Avg readiness</div>
       </div>
+      <div style="background:var(--bgc);border-radius:12px;border:1px solid var(--br);padding:13px 18px;flex:1;min-width:110px;">
+        <div style="font-size:26px;font-weight:900;color:#1D4ED8;font-family:'Poppins',sans-serif;" id="master-demo-count">—</div>
+        <div style="font-size:10px;color:var(--t3);font-weight:700;">Demo facilities (trial)</div>
+      </div>
     </div>
     <div class="sc-report-bar">
       <button class="sc-report-btn" onclick="openReportModal('facility')"><i class="ti ti-building-hospital"></i> Facility Report</button>
@@ -1292,6 +1319,20 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
       <div style="font-size:10px;font-weight:800;color:var(--t2);margin-bottom:7px;text-transform:uppercase;letter-spacing:0.5px;">Staff</div>
       <div id="sc-drill-staff"></div>
     </div>
+    <!-- District / Bulk Enrollment Leads -->
+    <div class="enroll-box" id="leads-box" style="display:none;background:var(--bgc);border-radius:14px;border:1px solid var(--br);padding:16px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:6px;"><i class="ti ti-building-community" style="color:#6D28D9;font-size:15px;"></i> District / Bulk Enrollment Enquiries</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Leads submitted via "District / Bulk enrollment? Contact us" on the login screen. Mark as contacted once you've followed up.</div>
+      <div id="leads-list"></div>
+    </div>
+
+    <!-- Demo / Trial Facilities -->
+    <div class="enroll-box" id="demo-facilities-box" style="display:none;background:var(--bgc);border-radius:14px;border:1px solid var(--br);padding:16px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:6px;"><i class="ti ti-rocket" style="color:#1D4ED8;font-size:15px;"></i> Demo / Trial Facilities</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Facilities that self-registered for the free trial. Confirm payment here once you've received it to unlock full access.</div>
+      <div id="demo-facilities-list"></div>
+    </div>
+
     <!-- Facility Grid -->
     <div class="sc-master-grid" id="sc-master-grid"></div>
     <!-- Enroll New Facility -->
@@ -1313,8 +1354,31 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
         <div><label class="lc-label">CHO Name</label><input class="fc-add-input" id="sc-enroll-choname" placeholder="CHO Name" style="width:100%;"/></div>
         <div><label class="lc-label">CHO Password *</label><input class="fc-add-input" id="sc-enroll-chopwd" placeholder="Facility admin password" style="width:100%;" type="password"/></div>
       </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);display:block;margin-bottom:5px;text-transform:uppercase;">Access Level</label>
+        <div style="display:flex;gap:8px;">
+          <label id="enroll-access-full-lbl" style="flex:1;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1.5px solid var(--teal);background:var(--teal-lt);border-radius:10px;cursor:pointer;">
+            <input type="radio" name="enroll-access" id="enroll-access-full" value="contract" checked onchange="enrollAccessToggle()"/>
+            <span style="font-size:12px;font-weight:700;color:var(--t1);">Full Access <span style="color:var(--t3);font-weight:600;">(contract / bulk deal)</span></span>
+          </label>
+          <label id="enroll-access-trial-lbl" style="flex:1;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1.5px solid var(--br);border-radius:10px;cursor:pointer;">
+            <input type="radio" name="enroll-access" id="enroll-access-trial" value="trial" onchange="enrollAccessToggle()"/>
+            <span style="font-size:12px;font-weight:700;color:var(--t1);">Start on 7-day Trial</span>
+          </label>
+        </div>
+      </div>
       <button onclick="scEnrollFacility()" style="width:100%;padding:11px;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;">
         <i class="ti ti-circle-plus" style="font-size:14px;"></i> Enroll Facility
+      </button>
+    </div>
+
+    <!-- Subscription Pricing -->
+    <div style="background:var(--bgc);border-radius:14px;border:1px solid var(--br);padding:16px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:8px;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:6px;"><i class="ti ti-currency-rupee" style="color:var(--teal);font-size:15px;"></i> Subscription Pricing</div>
+      <div style="font-size:11px;color:var(--t3);margin-bottom:10px;">Set the price per package. A trial facility can buy their chosen package once their 7-day trial ends. Leave blank to keep a package unpriced.</div>
+      <div id="pricing-list"></div>
+      <button onclick="adminSavePricing()" style="width:100%;padding:11px;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;">
+        <i class="ti ti-device-floppy" style="font-size:14px;"></i> Save Pricing
       </button>
     </div>
     <!-- Access Key -->
@@ -1590,6 +1654,11 @@ async function scStaffLogin(){
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-rocket" style="font-size:15px;"></i> Enter SC App';}
       return;
     }
+    if(facData.migratedTo){
+      err.textContent='This facility has been upgraded. Please use your new Facility ID: '+facData.migratedTo;err.classList.add('show');
+      if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-rocket" style="font-size:15px;"></i> Enter SC App';}
+      return;
+    }
     if(facData.suspended){
       err.textContent='This facility is currently suspended. Contact HealSol Academy.';err.classList.add('show');
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-rocket" style="font-size:15px;"></i> Enter SC App';}
@@ -1618,6 +1687,8 @@ async function scStaffLogin(){
     choState.facility.name     = facData.name || fid;
     choState.facility.district = facData.district || '';
     choState.facility.state    = facData.state || '';
+    choState.facility.subscriptionStatus = facData.subscriptionStatus || null;
+    choState.facility.progId   = facData.progId || 'nqas_7A';
     if(facData.startDate) choState.startDate = facData.startDate;
     // Mark setup done — all facility data loaded from Firebase
     choState.setupDone = true;
@@ -1643,6 +1714,7 @@ async function scChoLogin(){
   try{
     const facData = await fbGet(scFacilityPath(fid));
     if(!facData){err.textContent='Facility ID not found. Contact HealSol Academy.';err.classList.add('show');return;}
+    if(facData.migratedTo){err.textContent='This facility has been upgraded. Please use the new Facility ID: '+facData.migratedTo;err.classList.add('show');return;}
     if(facData.suspended){err.textContent='Facility suspended. Contact HealSol Academy.';err.classList.add('show');return;}
     if(pwd !== facData.choPassword){err.textContent='Incorrect admin password.';err.classList.add('show');return;}
     // One-time activation key
@@ -1685,7 +1757,7 @@ window.addEventListener('load', async function(){
         await new Promise(r=>setTimeout(r,1000));
         try{
           const facData = await fbGet(scFacilityPath(fid));
-          if(!facData||facData.suspended) throw new Error('Facility not available');
+          if(!facData||facData.suspended||facData.migratedTo) throw new Error('Facility not available');
           const staffRec = await fbGet(scStaffPath(fid, mob));
           if(!staffRec) throw new Error('Staff not found');
           if(pwd !== (staffRec.password||mob.slice(-4))) throw new Error('Password changed');
@@ -1698,6 +1770,8 @@ window.addEventListener('load', async function(){
           choState.facility.name = facData.name||fid;
           choState.facility.district = facData.district||'';
           choState.facility.state    = facData.state||'';
+          choState.facility.subscriptionStatus = facData.subscriptionStatus||null;
+          choState.facility.progId   = facData.progId||'nqas_7A';
           if(facData.startDate) choState.startDate = facData.startDate;
           await scStartApp();
             choState.setupDone = true;
@@ -2015,7 +2089,12 @@ async function scLoadMasterData(){
 
 function scRenderMasterDashboard(){
   const grid=document.getElementById('sc-master-grid');if(!grid)return;
+  if(typeof adminRenderPricingPanel==='function')adminRenderPricingPanel();
+  if(typeof renderDemoFacilitiesPanel==='function')renderDemoFacilitiesPanel();
+  if(typeof renderLeadsPanel==='function')renderLeadsPanel();
   const codes=Object.keys(scMasterFacilities);
+  const demoCount=codes.filter(c=>scMasterFacilities[c]&&scMasterFacilities[c].isDemo&&scMasterFacilities[c].subscriptionStatus!=='paid').length;
+  const demoEl=document.getElementById('master-demo-count');if(demoEl)demoEl.textContent=demoCount;
   document.getElementById('sc-master-total').textContent=codes.length;
   let totalPct=0,cnt=0;
   const cards=codes.map(code=>{
@@ -2042,7 +2121,7 @@ function scRenderMasterDashboard(){
       <div class="mfc-top">
         <div class="mfc-icon">🏥</div>
         <div style="flex:1;min-width:0;">
-          <div class="mfc-name">${fac?.name||code}${fac?.suspended?' <span style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:1px 6px;font-size:8px;font-weight:800;">Suspended</span>':''}</div>
+          <div class="mfc-name">${fac?.name||code}${fac?.suspended?' <span style="background:#FEF3C7;color:#92400E;border-radius:8px;padding:1px 6px;font-size:8px;font-weight:800;">Suspended</span>':''}${fac?.isDemo?` <span style="background:#DBEAFE;color:#1D4ED8;border-radius:8px;padding:1px 6px;font-size:8px;font-weight:800;">DEMO · ${fac.subscriptionStatus==='paid'?'Paid':'Trial'}</span>`:''}${(!fac?.isDemo&&fac?.subscriptionStatus==='contract')?' <span style="background:#EDE9FE;color:#6D28D9;border-radius:8px;padding:1px 6px;font-size:8px;font-weight:800;">Contract</span>':''}</div>
           <div class="mfc-loc">${[fac?.district,fac?.state].filter(Boolean).join(', ')||'—'}</div>
           <div style="font-size:9px;color:var(--teal);font-weight:700;margin-top:1px;">📋 ${fac?.progId||'—'} · 👥 ${staffCount} staff</div>
         </div>
@@ -2109,8 +2188,13 @@ async function scEnrollFacility(){
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-circle-plus" style="font-size:14px;"></i> Enroll Facility';}
       return;
     }
+    const accessLevel=(document.querySelector('input[name="enroll-access"]:checked')||{}).value||'contract';
     const facData={name,district,state,progId,choName,choPassword:choPwd,
-      enrolledAt:new Date().toISOString(),active:true,suspended:false};
+      enrolledAt:new Date().toISOString(),active:true,suspended:false,
+      subscriptionStatus:accessLevel,accessKeyVerified:true};
+    if(accessLevel==='trial'){
+      facData.trialStartDate=new Date().toISOString();
+    }
     const ok=await fbSet(scFacilityPath(code),facData);
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-circle-plus" style="font-size:14px;"></i> Enroll Facility';}
     if(!ok){showToast('Write failed. Check Firebase rules allow write access.','err');return;}
@@ -2121,6 +2205,7 @@ async function scEnrollFacility(){
     return;
   }
   ['sc-enroll-code','sc-enroll-name','sc-enroll-district','sc-enroll-state','sc-enroll-choname','sc-enroll-chopwd'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const fullRadio=document.getElementById('enroll-access-full');if(fullRadio){fullRadio.checked=true;enrollAccessToggle();}
   await scLoadMasterData();
   scRenderMasterDashboard();
   showToast('"'+name+'" enrolled successfully!','ok');
@@ -2775,6 +2860,7 @@ function switchLoginTab(t){ scSwitchTab(t); }
 
 function buildStaffProgSelector(){
   const wrap=$('staff-prog-selector');
+  if(!wrap)return;
   wrap.innerHTML=PROGRAMS.map(p=>`
     <div class="prog-opt" id="po-${p.id}" onclick="selectStaffProg('${p.id}')">
       <div class="po-icon">${p.icon}</div>
@@ -3003,10 +3089,13 @@ function getCHOCard(di){
   if(!choState.cards[di])choState.cards[di]={cpScores:new Array(arr[di]?.cps?.length||0).fill(null),taskDone:false,verified:false,score:null,verifierComment:'',commentDate:'',gapRetries:{}};
   return choState.cards[di];
 }
+var _SC_PROGID_TO_AELETTER={'nqas_7A':'A','nqas_7B':'B','nqas_12A':'C','nqas_12B':'D'};
 function getDay(di){
   const arr=getDaysArr(choState.progId);
   const base=arr[di];if(!base) return arr[0];
-  const edit=adminEdits[di];
+  const aeLetter=_SC_PROGID_TO_AELETTER[choState.progId]||'A';
+  const key=aeLetter+'_'+di;
+  const edit=adminEdits[key];
   if(!edit) return base;
   return{...base,title:edit.title??base.title,task:edit.task??base.task,me:edit.me??base.me,methods:edit.methods??base.methods,cps:edit.cps??base.cps};
 }
@@ -3019,10 +3108,8 @@ async function startCHOApp(){
   loadCHOState();
   // Pull published config + edits + start date from Firebase
   try{
-    const r=await storage.get(cfgKey(choState.progId),true);
-    if(r&&r.value){const cfg=JSON.parse(r.value);choState.facility.pkg=cfg.pkg;choState.facility.type=cfg.type;}
-    const re=await storage.get(editKey(choState.progId),true);
-    if(re&&re.value)adminEdits=JSON.parse(re.value);
+    const shared=await fbGet('shared/admin_edits');
+    if(shared)adminEdits=shared;
     // Load admin-set start date if facility hasn't set their own
     if(!choState.startDate){
       const sd=await fbGet('shared/nqas_start_'+choState.progId);
@@ -3183,6 +3270,11 @@ function scrollToToday(){const el=$('ds-scroll')?.children[choState.currentDay-1
 // ══════════════════════════════════════════════════════════════
 function renderCard(di){
   const d=getDay(di);const c=getCHOCard(di);
+  if(!phcCheckAccess(di,d)){
+    var cont=$('card-container');
+    if(cont){renderUpgradeCard(cont,d);}
+    return;
+  }
   const isLocked=(di+1)>choState.currentDay;const isBoss=!!d.isBoss;
   const aocColor=isBoss?'#D97706':d.aoc==='AE'?'#1E6B5E':getAoCDef(d.aoc).color;
   const hdBg=isBoss?`linear-gradient(135deg,#D97706,#92400E)`:
@@ -4246,6 +4338,7 @@ function showVideoPopup(url){
 
 // Active CP data for editor (module-level so renderFiltered can access)
 var _aeCps  = [];
+var _aeCpsOriginal = [];
 var _aeDiU  = null;
 
 function aeRenderCPs(di){
@@ -4274,6 +4367,7 @@ function aeRenderCPs(di){
   } else {
     _aeCps = JSON.parse(JSON.stringify(d.cps || []));
   }
+  _aeCpsOriginal = JSON.parse(JSON.stringify(_aeCps));
 
   cont.innerHTML =
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;">'
@@ -4326,6 +4420,7 @@ function aeFilterCPs(){
       + _SC_SERVICES.map(function(s){ return '<option value="'+s+'"'+((cp.svc===s||cp.service===s)?' selected':'')+'>'+s+'</option>'; }).join('')
       + '</select>';
 
+    r1 += '<button onclick="aePropagateCP('+ci+')" title="Apply this edit to matching checkpoints elsewhere" style="background:#EEF2FF;color:#4F46E5;border:1.5px solid #C7D2FE;border-radius:7px;padding:3px 9px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0;">🔗 Propagate</button>';
     r1 += '<button onclick="aeDeleteCPByIndex('+ci+')" style="background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;border-radius:7px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0;">✕</button>';
     r1 += '</div>';
 
@@ -4382,6 +4477,75 @@ function aeUpdateField(el){
     adminEdits[adminActiveProg+'_'+_aeDiU].cps[ci][field] = val;
     _aeCps[ci][field] = val;
   }
+}
+
+// ══ PROPAGATE EDIT — apply a checkpoint's edit to every matching occurrence ══
+// across all 4 packages AND repeated gap-closure/consolidation days within each.
+// Matching is done by the checkpoint's ORIGINAL text (captured when the day was
+// opened), so it's safe even if you've already changed the text in this session.
+function _aeArrayForProg(prog){
+  var progMap = {
+    'A': typeof DAYS_7A  !=='undefined' ? DAYS_7A  : null,
+    'B': typeof DAYS_7B  !=='undefined' ? DAYS_7B  : null,
+    'C': typeof DAYS_12A !=='undefined' ? DAYS_12A : null,
+    'D': typeof DAYS_12B !=='undefined' ? DAYS_12B : null,
+  };
+  return progMap[prog] || [];
+}
+function _aeEffectiveCps(prog, di){
+  var key = prog+'_'+di;
+  if(adminEdits[key] && adminEdits[key].cps) return adminEdits[key].cps;
+  var arr = _aeArrayForProg(prog);
+  var d = arr[di];
+  return d ? (d.cps||[]) : [];
+}
+async function aePropagateCP(ci){
+  var origCp = _aeCpsOriginal[ci];
+  var oldText = origCp ? (origCp.t||'').trim() : '';
+  if(!oldText){ showToast('Nothing to match on yet.','err'); return; }
+  var curCp = _aeCps[ci];
+  var newVals = { t: curCp.t, hi: curCp.hi, video: curCp.video, method: (curCp.method||[]).slice() };
+  var curProg = adminActiveProg, curDi = _aeDiU;
+
+  var matches = [];
+  _AE_PROGS.forEach(function(prog){
+    var arr = _aeArrayForProg(prog);
+    arr.forEach(function(day, di){
+      if(prog===curProg && di===curDi) return; // this day is handled by the normal Save
+      var cps = _aeEffectiveCps(prog, di);
+      cps.forEach(function(cp, ci2){
+        if((cp.t||'').trim() === oldText) matches.push({prog:prog, di:di, ci:ci2});
+      });
+    });
+  });
+
+  if(!matches.length){ showToast('No other matching checkpoints found.','ok'); return; }
+
+  var ok = await showConfirm(
+    'Found this checkpoint in '+matches.length+' other place'+(matches.length===1?'':'s')+' (across packages and/or repeated revision days). Apply this same edit to all of them?',
+    '🔗','Propagate Edit','Apply to All','var(--teal)'
+  );
+  if(!ok) return;
+
+  matches.forEach(function(m){
+    var key = m.prog+'_'+m.di;
+    if(!adminEdits[key]){
+      var arr = _aeArrayForProg(m.prog); var d = arr[m.di];
+      adminEdits[key] = { cps: JSON.parse(JSON.stringify(d?d.cps||[]:[])) };
+    }
+    if(adminEdits[key].cps[m.ci]){
+      adminEdits[key].cps[m.ci].t      = newVals.t;
+      adminEdits[key].cps[m.ci].hi     = newVals.hi;
+      adminEdits[key].cps[m.ci].video  = newVals.video;
+      adminEdits[key].cps[m.ci].method = newVals.method.slice();
+    }
+  });
+
+  try{ localStorage.setItem('adminEdits_v2', JSON.stringify(adminEdits)); }catch(e){}
+  var saveOk = (typeof fbSet==='function') ? await fbSet('shared/admin_edits', adminEdits) : false;
+  _aeCpsOriginal[ci] = JSON.parse(JSON.stringify(_aeCps[ci])); // reset baseline for this cp
+  showToast(saveOk ? ('✓ Applied to '+matches.length+' other checkpoint(s)') : 'Applied locally — Firebase save failed', saveOk?'ok':'err');
+  buildAeDayStrip();
 }
 
 function aeUpdateMethod(cb){
@@ -4475,6 +4639,368 @@ window.addEventListener('load', initLang);
 
 
 
+
+
+// ══════════════════════════════════════════════════════════════
+// DEMO SIGNUP + SUBSCRIPTION PAYWALL + LEADS (SC — package-based)
+// ══════════════════════════════════════════════════════════════
+
+var _SC_PKG_LABELS={
+  'nqas_7A':'7A — 7 Services (30 days)',
+  'nqas_7B':'7B — 7 Services + Delivery (30 days)',
+  'nqas_12A':'12A — 12 Services (60 days)',
+  'nqas_12B':'12B — 12 Services + Delivery (60 days)'
+};
+
+function phcOpenDemoSignup(){ var ov=document.getElementById('demo-signup-overlay'); if(ov)ov.classList.add('open'); }
+function phcCloseDemoSignup(){ var ov=document.getElementById('demo-signup-overlay'); if(ov)ov.classList.remove('open'); }
+
+async function phcSubmitDemoSignup(){
+  var name=(document.getElementById('demo-fac-name')||{}).value||'';name=name.trim();
+  var district=(document.getElementById('demo-fac-district')||{}).value||'';district=district.trim();
+  var state=(document.getElementById('demo-fac-state')||{}).value||'';state=state.trim();
+  var progId=(document.getElementById('demo-fac-pkg')||{}).value||'nqas_7A';
+  var contactName=(document.getElementById('demo-contact-name')||{}).value||'';contactName=contactName.trim();
+  var mobile=(document.getElementById('demo-contact-mobile')||{}).value||'';mobile=mobile.trim();
+  var errEl=document.getElementById('demo-signup-err');
+  if(errEl)errEl.style.display='none';
+  if(!name||!contactName||!mobile||mobile.length!==10||!/^\d{10}$/.test(mobile)){
+    if(errEl){errEl.textContent='Please fill facility name, your name, and a valid 10-digit mobile number.';errEl.style.display='block';}
+    return;
+  }
+  var btn=document.querySelector('#demo-signup-body .fc-add-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='Creating…';}
+  try{
+    var code=null, attempts=0;
+    while(attempts<10){
+      var candidate='DEMO-SC-'+Math.floor(1000+Math.random()*9000);
+      var existing=await fbGet(scFacilityPath(candidate));
+      if(!existing){code=candidate;break;}
+      attempts++;
+    }
+    if(!code){ throw new Error('Could not allocate a facility code. Please try again.'); }
+    var pwd=Math.random().toString(36).slice(2,8).toUpperCase();
+    var facData={
+      name:name, district:district, state:state, progId:progId,
+      choName:contactName, choPassword:pwd, contactMobile:mobile,
+      enrolledAt:new Date().toISOString(), active:true, suspended:false,
+      isDemo:true,
+      trialStartDate:new Date().toISOString(),
+      subscriptionStatus:'trial',
+      accessKeyVerified:true
+    };
+    var ok=await fbSet(scFacilityPath(code),facData);
+    if(!ok) throw new Error('Could not save facility. Please check your connection and try again.');
+    var body=document.getElementById('demo-signup-body');
+    if(body){
+      body.innerHTML='<div style="text-align:center;padding:10px 0;">'
+        +'<div style="font-size:40px;margin-bottom:10px;">🎉</div>'
+        +'<div style="font-size:15px;font-weight:800;color:var(--t1);margin-bottom:6px;">Your demo facility is ready!</div>'
+        +'<div style="font-size:12px;color:var(--t3);margin-bottom:18px;">Save these details — you\'ll need them to log in as CHO / Facility Admin.</div>'
+        +'<div style="background:var(--bgs,#F9FAFB);border-radius:12px;padding:14px;margin-bottom:8px;text-align:left;">'
+        +'<div style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;">Facility ID</div>'
+        +'<div style="font-size:16px;font-weight:800;color:var(--teal-dk);font-family:monospace;">'+code+'</div></div>'
+        +'<div style="background:var(--bgs,#F9FAFB);border-radius:12px;padding:14px;margin-bottom:18px;text-align:left;">'
+        +'<div style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;">CHO Password</div>'
+        +'<div style="font-size:16px;font-weight:800;color:var(--teal-dk);font-family:monospace;">'+pwd+'</div></div>'
+        +'<button class="fc-add-btn" style="width:100%;padding:12px;border-radius:10px;font-size:13px;" id="demo-login-now-btn">'
+        +'<i class="ti ti-login-2"></i> Log in now</button></div>';
+      var loginBtn=document.getElementById('demo-login-now-btn');
+      if(loginBtn)loginBtn.onclick=function(){
+        phcCloseDemoSignup();
+        if(typeof scShowChoLogin==='function')scShowChoLogin();
+        var fidEl=document.getElementById('sc-cho-fid');
+        if(fidEl)fidEl.value=code;
+      };
+    }
+  }catch(e){
+    if(errEl){errEl.textContent=e.message||'Something went wrong. Please try again.';errEl.style.display='block';}
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-rocket" style="font-size:14px;"></i> Create my free demo';}
+  }
+}
+
+function phcOpenLeadModal(){ var ov=document.getElementById('lead-signup-overlay'); if(ov)ov.classList.add('open'); }
+function phcCloseLeadModal(){ var ov=document.getElementById('lead-signup-overlay'); if(ov)ov.classList.remove('open'); }
+
+async function phcSubmitLead(){
+  var orgName=(document.getElementById('lead-org-name')||{}).value||'';orgName=orgName.trim();
+  var contactName=(document.getElementById('lead-contact-name')||{}).value||'';contactName=contactName.trim();
+  var mobile=(document.getElementById('lead-contact-mobile')||{}).value||'';mobile=mobile.trim();
+  var facCount=(document.getElementById('lead-fac-count')||{}).value||'';facCount=facCount.trim();
+  var errEl=document.getElementById('lead-signup-err');
+  if(errEl)errEl.style.display='none';
+  if(!orgName||!contactName||!mobile||mobile.length!==10||!/^\d{10}$/.test(mobile)){
+    if(errEl){errEl.textContent='Please fill organization name, your name, and a valid 10-digit mobile number.';errEl.style.display='block';}
+    return;
+  }
+  var btn=document.querySelector('#lead-signup-body .fc-add-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='Submitting…';}
+  try{
+    var leadId='lead_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    var lead={ orgName:orgName, contactName:contactName, mobile:mobile, facilityCount:facCount||null, submittedAt:new Date().toISOString(), status:'new' };
+    var ok=await fbSet('shared/sc_leads/'+leadId, lead);
+    if(!ok) throw new Error('Could not submit — please check your connection and try again.');
+    var body=document.getElementById('lead-signup-body');
+    if(body){
+      body.innerHTML='<div style="text-align:center;padding:10px 0;">'
+        +'<div style="font-size:40px;margin-bottom:10px;">🙌</div>'
+        +'<div style="font-size:15px;font-weight:800;color:var(--t1);margin-bottom:6px;">Thanks, '+contactName+'!</div>'
+        +'<div style="font-size:12px;color:var(--t3);margin-bottom:18px;">Our team will reach out to '+mobile+' shortly to discuss enrolling '+orgName+'.</div>'
+        +'<button class="fc-add-btn" style="width:100%;padding:12px;border-radius:10px;font-size:13px;" onclick="phcCloseLeadModal()">Close</button></div>';
+    }
+  }catch(e){
+    if(errEl){errEl.textContent=e.message||'Something went wrong. Please try again.';errEl.style.display='block';}
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send" style="font-size:14px;"></i> Submit Enquiry';}
+  }
+}
+var _phcLeadsCache={};
+async function renderLeadsPanel(){
+  var box=document.getElementById('leads-box');var list=document.getElementById('leads-list');
+  if(!box||!list)return;
+  var leads=await fbGet('shared/sc_leads');
+  _phcLeadsCache=leads||{};
+  var ids=Object.keys(_phcLeadsCache).filter(function(id){return _phcLeadsCache[id].status!=='closed';});
+  if(!ids.length){box.style.display='none';return;}
+  box.style.display='block';
+  ids.sort(function(a,b){return new Date(_phcLeadsCache[b].submittedAt)-new Date(_phcLeadsCache[a].submittedAt);});
+  while(list.firstChild)list.removeChild(list.firstChild);
+  ids.forEach(function(id){
+    var lead=_phcLeadsCache[id];
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--br);border-radius:12px;margin-bottom:8px;flex-wrap:wrap;';
+    var when='';try{ when=new Date(lead.submittedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }catch(e){}
+    row.innerHTML='<div style="flex:1;min-width:220px;">'
+      +'<div style="font-weight:800;font-size:13px;color:var(--t1);">'+lead.orgName+(lead.facilityCount?(' <span style="color:var(--t3);font-weight:600;font-size:11px;">· ~'+lead.facilityCount+' facilities</span>'):'')+'</div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-top:2px;">'+lead.contactName+' · '+lead.mobile+' · Submitted '+when+'</div></div>';
+    var closeBtn=document.createElement('button');closeBtn.className='rm-cancel';closeBtn.style.cssText='padding:7px 12px;border-radius:8px;font-size:11px;flex-shrink:0;';closeBtn.textContent='Mark Contacted';
+    closeBtn.onclick=function(){ phcCloseLead(id); };
+    row.appendChild(closeBtn);list.appendChild(row);
+  });
+}
+async function phcCloseLead(id){
+  if(!_phcLeadsCache[id])return;
+  _phcLeadsCache[id].status='closed';
+  await fbSet('shared/sc_leads/'+id, _phcLeadsCache[id]);
+  renderLeadsPanel();showToast('Lead marked as contacted.','ok');
+}
+
+// ── Pricing config (4 packages, not departments) ────────────────
+var _phcPricingCache=null;
+function _phcAllPriceableItems(){
+  return Object.keys(_SC_PKG_LABELS).map(function(id){return {id:id,label:_SC_PKG_LABELS[id]};});
+}
+async function phcLoadPricing(force){
+  if(_phcPricingCache&&!force)return _phcPricingCache;
+  var cfg=null;
+  try{cfg=await fbGet('shared/sc_pricing_config');}catch(e){}
+  var base=_phcAllPriceableItems();
+  var priceMap={};
+  if(cfg&&cfg.items)cfg.items.forEach(function(it){priceMap[it.id]=it.price;});
+  base.forEach(function(it){it.price=(priceMap[it.id]!==undefined)?priceMap[it.id]:null;});
+  _phcPricingCache={items:base};
+  return _phcPricingCache;
+}
+async function adminRenderPricingPanel(){
+  var cont=document.getElementById('pricing-list');if(!cont)return;
+  var cfg=await phcLoadPricing(true);
+  while(cont.firstChild)cont.removeChild(cont.firstChild);
+  cfg.items.forEach(function(it){
+    var row=document.createElement('div');row.className='pricing-row';
+    var lbl=document.createElement('div');lbl.style.cssText='flex:1;font-size:12px;font-weight:700;color:var(--t1);';lbl.textContent=it.label;
+    var rupee=document.createElement('span');rupee.style.cssText='font-size:12px;color:var(--t3);';rupee.textContent='₹';
+    var inp=document.createElement('input');inp.type='number';inp.min='0';inp.placeholder='Not set';
+    inp.value=(it.price!==null&&it.price!==undefined)?it.price:'';inp.dataset.itemId=it.id;
+    row.appendChild(lbl);row.appendChild(rupee);row.appendChild(inp);cont.appendChild(row);
+  });
+}
+async function adminSavePricing(){
+  var cont=document.getElementById('pricing-list');if(!cont)return;
+  var items=[];
+  cont.querySelectorAll('input[data-item-id]').forEach(function(inp){
+    var v=inp.value.trim();items.push({id:inp.dataset.itemId,label:_SC_PKG_LABELS[inp.dataset.itemId]||'',price:v===''?null:Number(v)});
+  });
+  var ok=await fbSet('shared/sc_pricing_config',{items:items});
+  _phcPricingCache=null;
+  showToast(ok?'Pricing saved!':'Save failed — check connection.',ok?'ok':'err');
+}
+
+// ── Access gate (day-index based — SC has one linear package, no sub-modules) ──
+function phcCheckAccess(di,day){
+  var fac=(typeof choState!=='undefined'?choState.facility:null)||{};
+  var status=fac.subscriptionStatus;
+  if(!status)return true;
+  if(status==='contract'||status==='paid')return true;
+  return (di+1)<=7;
+}
+
+function upgradeCardHTML(day){
+  return '<div class="upgrade-card">'
+    +'<div class="upgrade-hd"><div style="font-size:34px;margin-bottom:6px;">🔒</div>'
+    +'<div style="font-size:16px;font-weight:800;">Your 7-day free trial has ended</div>'
+    +'<div style="font-size:12px;opacity:0.9;margin-top:4px;">Subscribe to continue your programme from where you left off.</div></div>'
+    +'<div class="upgrade-body"><div id="upgrade-pkg-list" style="margin-bottom:14px;"></div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1.5px solid var(--br);margin-bottom:14px;">'
+    +'<span style="font-size:12px;font-weight:800;color:var(--t3);">Total</span>'
+    +'<span id="upgrade-total" style="font-size:18px;font-weight:800;color:var(--teal-dk);">₹0</span></div>'
+    +'<button class="fc-add-btn" id="upgrade-pay-btn" style="width:100%;padding:13px;border-radius:12px;font-size:14px;" disabled>'
+    +'<i class="ti ti-credit-card" style="font-size:15px;"></i> Loading your package…</button></div></div>';
+}
+var _upgradeSelected={};
+async function renderUpgradeCard(container, day){
+  container.innerHTML=upgradeCardHTML(day);
+  _upgradeSelected={};
+  var cfg=await phcLoadPricing();
+  var myProgId=(choState.facility||{}).progId||choState.progId;
+  var list=document.getElementById('upgrade-pkg-list');if(!list)return;
+  var it=cfg.items.find(function(x){return x.id===myProgId;});
+  if(it&&it.price!==null&&it.price!==undefined){
+    _upgradeSelected[it.id]=it.price;
+    var row=document.createElement('div');row.className='pkg-item checked';
+    var box=document.createElement('div');
+    box.style.cssText='width:20px;height:20px;border-radius:6px;border:2px solid var(--teal);background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;flex-shrink:0;';
+    box.textContent='✓';
+    var lbl=document.createElement('div');lbl.style.cssText='flex:1;font-size:13px;font-weight:700;color:var(--t1);';lbl.textContent='Your Package: '+it.label;
+    var price=document.createElement('div');price.style.cssText='font-size:13px;font-weight:800;color:var(--teal-dk);';price.textContent='₹'+it.price;
+    row.appendChild(box);row.appendChild(lbl);row.appendChild(price);
+    list.appendChild(row);
+  }else{
+    var none=document.createElement('div');none.style.cssText='padding:14px;text-align:center;font-size:12px;color:var(--t3);';
+    none.textContent='Pricing hasn\'t been set up for your package yet — please contact HealSol Academy to subscribe.';list.appendChild(none);
+  }
+  updateUpgradeTotal();
+}
+function updateUpgradeTotal(){
+  var total=Object.values(_upgradeSelected).reduce(function(a,b){return a+b;},0);
+  var totalEl=document.getElementById('upgrade-total');if(totalEl)totalEl.textContent='₹'+total;
+  var payBtn=document.getElementById('upgrade-pay-btn');
+  if(payBtn){
+    var n=Object.keys(_upgradeSelected).length;
+    payBtn.disabled=n===0;
+    payBtn.innerHTML=n===0?'<i class="ti ti-credit-card" style="font-size:15px;"></i> Contact HealSol to subscribe':'<i class="ti ti-credit-card" style="font-size:15px;"></i> Pay ₹'+total+' & Unlock';
+    payBtn.onclick=n===0?null:function(){phcStartCheckout(Object.keys(_upgradeSelected),total);};
+  }
+}
+
+var RAZORPAY_KEY_ID='rzp_test_1234567890abcd';
+function phcStartCheckout(moduleIds,totalRupees){
+  if(typeof Razorpay==='undefined'){showToast('Payment system unavailable — check your connection.','err');return;}
+  var options={
+    key:RAZORPAY_KEY_ID, amount:Math.round(totalRupees*100), currency:'INR',
+    name:'HealSol Academy',
+    description:'NQAS MasterClass FAST — SC subscription ('+(_SC_PKG_LABELS[moduleIds[0]]||moduleIds[0])+')',
+    prefill:{name:(choState.facility||{}).name||'',contact:choState.staffMobile||''},
+    theme:{color:'#1E6B5E'},
+    handler:async function(response){
+      try{
+        var facData=await fbGet(scFacilityPath(choState.facilityCode))||{};
+        facData.subscriptionStatus='paid';
+        facData.lastPayment={id:response.razorpay_payment_id,amount:totalRupees,package:moduleIds[0],at:new Date().toISOString()};
+        await fbSet(scFacilityPath(choState.facilityCode),facData);
+        choState.facility.subscriptionStatus='paid';
+        showToast('Payment successful! Unlocked.','ok');
+        if(typeof renderCard==='function'&&choState.currentDay)renderCard(choState.currentDay-1);
+      }catch(e){ showToast('Payment received but unlocking failed — contact support with payment ID '+response.razorpay_payment_id,'err'); }
+    },
+    modal:{ondismiss:function(){}}
+  };
+  var rzp=new Razorpay(options);rzp.open();
+}
+
+// ── Admin: Demo Facilities panel + Confirm Payment / code reassignment ──
+function renderDemoFacilitiesPanel(){
+  var box=document.getElementById('demo-facilities-box');var list=document.getElementById('demo-facilities-list');
+  if(!box||!list)return;
+  var demoCodes=Object.keys(scMasterFacilities).filter(function(c){return scMasterFacilities[c]&&scMasterFacilities[c].isDemo&&!scMasterFacilities[c].migratedTo;});
+  if(!demoCodes.length){box.style.display='none';return;}
+  box.style.display='block';
+  while(list.firstChild)list.removeChild(list.firstChild);
+  demoCodes.forEach(function(code){
+    var fac=scMasterFacilities[code];
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid var(--br);border-radius:12px;margin-bottom:8px;flex-wrap:wrap;';
+    var daysElapsed='—';
+    if(fac.trialStartDate){var ms=Date.now()-new Date(fac.trialStartDate).getTime();daysElapsed=Math.max(0,Math.floor(ms/86400000))+' days ago';}
+    var statusBadge=fac.subscriptionStatus==='paid'
+      ?'<span style="background:#DCFCE7;color:#15803D;border-radius:10px;padding:2px 9px;font-size:10px;font-weight:800;">✓ Paid</span>'
+      :'<span style="background:#DBEAFE;color:#1D4ED8;border-radius:10px;padding:2px 9px;font-size:10px;font-weight:800;">Trial</span>';
+    row.innerHTML='<div style="flex:1;min-width:200px;">'
+      +'<div style="font-weight:800;font-size:13px;color:var(--t1);">'+(fac.name||code)+' '+statusBadge+'</div>'
+      +'<div style="font-size:11px;color:var(--t3);margin-top:2px;">'+code+' · '+(_SC_PKG_LABELS[fac.progId]||fac.progId)+' · Signed up '+daysElapsed+(fac.choName?(' · '+fac.choName):'')+(fac.contactMobile?(' · '+fac.contactMobile):'')+'</div></div>';
+    var btn=document.createElement('button');btn.className='fc-add-btn';btn.style.cssText='padding:8px 14px;border-radius:9px;font-size:11px;flex-shrink:0;';
+    btn.innerHTML='<i class="ti ti-credit-card" style="font-size:13px;"></i> '+(fac.subscriptionStatus==='paid'?'Update':'Confirm Payment');
+    btn.onclick=function(){ openDemoConvertModal(code); };
+    row.appendChild(btn);list.appendChild(row);
+  });
+}
+async function openDemoConvertModal(code){
+  var fac=scMasterFacilities[code]||{};
+  var cfg=await phcLoadPricing();
+  var it=cfg.items.find(function(x){return x.id===fac.progId;});
+  var body=document.getElementById('demo-convert-body');
+  var priceVal=it&&it.price!==null?it.price:0;
+  var html='<div style="font-size:12px;color:var(--t3);margin-bottom:14px;"><strong>'+(fac.name||code)+'</strong> ('+code+')<br>Package: <strong>'+(_SC_PKG_LABELS[fac.progId]||fac.progId)+'</strong>. Confirm the price for this facility (defaults from your pricing list, editable here).</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">'
+    +'<span style="font-size:12px;font-weight:800;color:var(--t3);">Price</span>'
+    +'<span style="font-size:12px;color:var(--t3);">₹</span>'
+    +'<input id="demo-convert-price" type="number" min="0" value="'+priceVal+'" style="width:120px;border:1.5px solid var(--br);border-radius:8px;padding:6px 9px;font-size:13px;font-family:inherit;"/>'
+    +'</div>'
+    +'<div style="margin-bottom:16px;padding:12px;background:var(--bgs,#F9FAFB);border-radius:10px;border:1.5px dashed var(--br);">'
+    +'<label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:5px;">Give this facility a permanent code (optional)</label>'
+    +'<input id="demo-convert-newcode" placeholder="e.g. UP-SC-045" style="width:100%;border:1.5px solid var(--br);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;text-transform:uppercase;box-sizing:border-box;"/>'
+    +'<div style="font-size:10px;color:var(--t3);margin-top:5px;">Leave blank to keep <strong>'+code+'</strong>. If filled, staff must log in with the new code from now on.</div></div>'
+    +'<button class="fc-add-btn" id="demo-convert-confirm-btn" style="width:100%;padding:12px;border-radius:10px;font-size:13px;"><i class="ti ti-check" style="font-size:14px;"></i> Confirm Payment & Unlock</button>';
+  body.innerHTML=html;
+  document.getElementById('demo-convert-confirm-btn').onclick=function(){ confirmDemoPayment(code); };
+  document.getElementById('demo-convert-overlay').classList.add('open');
+}
+function closeDemoConvertModal(){ document.getElementById('demo-convert-overlay').classList.remove('open'); }
+
+async function confirmDemoPayment(code){
+  var priceInp=document.getElementById('demo-convert-price');
+  var total=priceInp?Number(priceInp.value)||0:0;
+  var newCodeRaw=(document.getElementById('demo-convert-newcode')||{}).value||'';
+  var newCode=newCodeRaw.trim().toUpperCase();
+  try{
+    var facData=await fbGet(scFacilityPath(code))||{};
+    facData.subscriptionStatus='paid';
+    facData.lastPayment={amount:total,package:facData.progId,confirmedBy:'admin',at:new Date().toISOString()};
+
+    if(newCode&&newCode!==code){
+      var existing=await fbGet(scFacilityPath(newCode));
+      if(existing){showToast('Facility code '+newCode+' is already in use — pick a different one.','err');return;}
+      var confirmMove=await showConfirm('This will permanently move '+(facData.name||code)+' from '+code+' to '+newCode+'. Staff must use the new code from now on. Continue?','🔄','Reassign Facility Code','Yes, Reassign','var(--teal)');
+      if(!confirmMove)return;
+      var newFacData=Object.assign({},facData);
+      newFacData.isDemo=false;newFacData.convertedFromDemoCode=code;newFacData.convertedAt=new Date().toISOString();
+      var ok1=await fbSet(scFacilityPath(newCode),newFacData);
+      if(!ok1){showToast('Failed to create new facility record.','err');return;}
+      var oldProgress=await fbGet('sc_progress/'+code);
+      if(oldProgress){ await fbSet('sc_progress/'+newCode,oldProgress); }
+      facData.migratedTo=newCode;facData.active=false;
+      await fbSet(scFacilityPath(code),facData);
+      scMasterFacilities[code]=facData;scMasterFacilities[newCode]=newFacData;
+      if(oldProgress){scMasterProgress[newCode]=oldProgress;}
+      closeDemoConvertModal();renderDemoFacilitiesPanel();scRenderMasterDashboard();
+      showToast('Facility upgraded and moved to '+newCode+'.','ok');
+      return;
+    }
+    var ok=await fbSet(scFacilityPath(code),facData);
+    if(!ok){showToast('Failed to save — check connection.','err');return;}
+    scMasterFacilities[code]=facData;
+    closeDemoConvertModal();renderDemoFacilitiesPanel();scRenderMasterDashboard();
+    showToast('Payment confirmed — facility unlocked.','ok');
+  }catch(e){ showToast('Error: '+e.message,'err'); }
+}
+
+function enrollAccessToggle(){
+  var full=document.getElementById('enroll-access-full');
+  var fullLbl=document.getElementById('enroll-access-full-lbl');var trialLbl=document.getElementById('enroll-access-trial-lbl');
+  if(!full||!fullLbl||!trialLbl)return;
+  var isFull=full.checked;
+  fullLbl.style.borderColor=isFull?'var(--teal)':'var(--br)';fullLbl.style.background=isFull?'var(--teal-lt)':'transparent';
+  trialLbl.style.borderColor=isFull?'var(--br)':'var(--teal)';trialLbl.style.background=isFull?'transparent':'var(--teal-lt)';
+}
+
 </script>
 
 <div class="report-modal-overlay" id="rpt-filter-modal">
@@ -4535,6 +5061,92 @@ window.addEventListener('load', initLang);
         <button onclick="rptGenerate('print')" style="flex:1;background:var(--teal-dk,#0F4C3A);color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">🖨 Print PDF</button>
       </div>
     </div>
+  </div>
+</div>
+<div id="demo-signup-overlay" class="rm-preview-overlay">
+  <div class="rm-preview-box" style="max-width:460px;height:auto;max-height:88vh;">
+    <div class="rm-preview-head">
+      <div class="rm-preview-head-title">🚀 Start your free demo</div>
+      <button class="rm-cancel" onclick="phcCloseDemoSignup()">✕ Close</button>
+    </div>
+    <div style="padding:20px;overflow-y:auto;" id="demo-signup-body">
+      <p style="font-size:12px;color:var(--t3);margin:0 0 16px;">Try the Sub-Centre programme free for your first 7 days. No credit card needed to start.</p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">Facility Name *</label>
+        <input id="demo-fac-name" class="fc-add-input" style="width:100%;" placeholder="e.g. Rampur Sub-Centre"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;">
+          <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">District</label>
+          <input id="demo-fac-district" class="fc-add-input" style="width:100%;" placeholder="District"/>
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">State</label>
+          <input id="demo-fac-state" class="fc-add-input" style="width:100%;" placeholder="State"/>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">Package</label>
+        <select id="demo-fac-pkg" class="fc-add-input" style="width:100%;">
+          <option value="nqas_7A">7A — 7 Services (30 days)</option>
+          <option value="nqas_7B">7B — 7 Services + Delivery (30 days)</option>
+          <option value="nqas_12A">12A — 12 Services (60 days)</option>
+          <option value="nqas_12B">12B — 12 Services + Delivery (60 days)</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">Your Name *</label>
+        <input id="demo-contact-name" class="fc-add-input" style="width:100%;" placeholder="CHO Name"/>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">Mobile Number *</label>
+        <input id="demo-contact-mobile" class="fc-add-input" style="width:100%;" placeholder="10-digit mobile" maxlength="10"/>
+      </div>
+      <div id="demo-signup-err" style="color:#DC2626;font-size:12px;font-weight:700;margin-bottom:10px;display:none;"></div>
+      <button class="fc-add-btn" onclick="phcSubmitDemoSignup()" style="width:100%;padding:12px;border-radius:10px;font-size:13px;">
+        <i class="ti ti-rocket" style="font-size:14px;"></i> Create my free demo
+      </button>
+    </div>
+  </div>
+</div>
+<div id="lead-signup-overlay" class="rm-preview-overlay">
+  <div class="rm-preview-box" style="max-width:440px;height:auto;max-height:88vh;">
+    <div class="rm-preview-head">
+      <div class="rm-preview-head-title">🏛️ District / Bulk Enrollment</div>
+      <button class="rm-cancel" onclick="phcCloseLeadModal()">✕ Close</button>
+    </div>
+    <div style="padding:20px;overflow-y:auto;" id="lead-signup-body">
+      <p style="font-size:12px;color:var(--t3);margin:0 0 16px;">Interested in enrolling multiple facilities under a district or organizational contract? Share your details and our team will reach out.</p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">District / Organization Name *</label>
+        <input id="lead-org-name" class="fc-add-input" style="width:100%;" placeholder="e.g. Sitapur District Health Society"/>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">Your Name *</label>
+        <input id="lead-contact-name" class="fc-add-input" style="width:100%;" placeholder="Dr. Anita Verma, CMO"/>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">Mobile Number *</label>
+        <input id="lead-contact-mobile" class="fc-add-input" style="width:100%;" placeholder="10-digit mobile" maxlength="10"/>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="font-size:10px;font-weight:800;color:var(--t3);text-transform:uppercase;display:block;margin-bottom:4px;">Approx. Number of Facilities</label>
+        <input id="lead-fac-count" class="fc-add-input" style="width:100%;" placeholder="e.g. 12" type="number" min="1"/>
+      </div>
+      <div id="lead-signup-err" style="color:#DC2626;font-size:12px;font-weight:700;margin-bottom:10px;display:none;"></div>
+      <button class="fc-add-btn" onclick="phcSubmitLead()" style="width:100%;padding:12px;border-radius:10px;font-size:13px;">
+        <i class="ti ti-send" style="font-size:14px;"></i> Submit Enquiry
+      </button>
+    </div>
+  </div>
+</div>
+<div id="demo-convert-overlay" class="rm-preview-overlay">
+  <div class="rm-preview-box" style="max-width:460px;height:auto;max-height:88vh;">
+    <div class="rm-preview-head">
+      <div class="rm-preview-head-title">💳 Confirm Payment</div>
+      <button class="rm-cancel" onclick="closeDemoConvertModal()">✕ Close</button>
+    </div>
+    <div style="padding:20px;overflow-y:auto;" id="demo-convert-body"></div>
   </div>
 </div>
 </body>
