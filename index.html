@@ -2017,6 +2017,10 @@ function adminLogin(){
 
 // ── Auto-login ────────────────────────────────────────────────
 window.addEventListener('load', async function(){
+  if(typeof NF_SECURE!=='undefined'&&NF_SECURE){   // secure sign-in restores sessions itself; wipe any password the old app saved
+    try{ var old=JSON.parse(localStorage.getItem('sc_autologin')||'null'); if(old&&old.pwd) localStorage.removeItem('sc_autologin'); }catch(e){}
+    return;
+  }
   try{
     const saved = localStorage.getItem('sc_autologin');
     if(saved){
@@ -15263,12 +15267,12 @@ html.nf-secure #sc-add-pwd{display:none!important;}
 var NF_SECURE=!!(window.firebase&&typeof firebase.auth==='function'&&typeof firebase.functions==='function');
 var NF_EMAIL_DOMAIN='accounts.nqasfast.app';
 var NF_FN_REGION='asia-south1';
-var NF_APPCHECK_SITE_KEY='';           // HealSol pastes the reCAPTCHA v3 site key here when App Check is set up
+var NF_APPCHECK_SITE_KEY='6Lf7xd8tAAAAACG20kXsbRb0-2dgg9eWvuEhJTjn';   // Fraud Defense (reCAPTCHA Enterprise) site key, registered in Firebase App Check
 var NF_IDLE_MIN=30;
 var _nfAuth=null;                      // { uid, email, claims }
 Object.assign(HINDI_UI,{'Set your new password':'अपना नया पासवर्ड बनाएँ','New password':'नया पासवर्ड','Confirm new password':'नया पासवर्ड दोबारा',
   'Save and continue':'सहेजें और आगे बढ़ें','Use at least 8 characters, with letters and numbers.':'कम से कम 8 अक्षर, जिनमें अक्षर और अंक दोनों हों।',
-  'The two passwords do not match.':'दोनों पासवर्ड मेल नहीं खाते।','Incorrect mobile number / ID or password.':'मोबाइल नंबर / ID या पासवर्ड ग़लत है।',
+  'The two passwords do not match.':'दोनों पासवर्ड मेल नहीं खाते।','Your sign-in has expired. Tap Back and log in again.':'आपका साइन-इन समाप्त हो गया है। वापस जाएँ और फिर से लॉग इन करें।','Your new password is saved. Tap Back and log in with it.':'आपका नया पासवर्ड सेव हो गया है। वापस जाएँ और उससे लॉग इन करें।','Saving…':'सेव हो रहा है…','Incorrect mobile number / ID or password.':'मोबाइल नंबर / ID या पासवर्ड ग़लत है।',
   'This account is blocked. Contact HealSol Academy.':'यह खाता बंद है। HealSol Academy से संपर्क करें।','Too many attempts. Please wait a few minutes and try again.':'बहुत अधिक प्रयास। कुछ मिनट बाद फिर कोशिश करें।',
   'You are signing in with a temporary password. Choose your own password to continue.':'आप अस्थायी पासवर्ड से लॉग इन कर रहे हैं। आगे बढ़ने के लिए अपना पासवर्ड बनाएँ।',
   'Change my password':'मेरा पासवर्ड बदलें'});
@@ -15301,6 +15305,8 @@ async function nfSecureSubmit(){
   if(!id){ nfError(t('Please enter your mobile number or ID.')); return; }
   if(!pwd){ nfError(t('Please enter your password.')); return; }
   var key=nfSecureKey(id); if(!key){ nfError(t('Incorrect mobile number / ID or password.')); return; }
+  if(_nfSignOutP){ try{ await _nfSignOutP; }catch(e){} _nfSignOutP=null; }   // the previous person's sign-out must finish first
+  _nfLogin.npSaved=false;
   var btn=document.getElementById('nf-btn'); _nfLogin.busy=true; if(btn){ btn.disabled=true; btn.textContent=t('Checking…'); }
   try{
     if(!db){ initFirebase(); await new Promise(function(r){ setTimeout(r,300); }); }
@@ -15354,16 +15360,22 @@ async function nfSaveNewPassword(){
   var show=function(m){ if(err){ err.textContent=m; err.style.display=m?'block':'none'; } };
   if(a.length<8||!/[A-Za-z]/.test(a)||!/[0-9]/.test(a)) return show(t('Use at least 8 characters, with letters and numbers.'));
   if(a!==b) return show(t('The two passwords do not match.'));
-  show(''); if(btn){ btn.disabled=true; btn.textContent=t('Checking…'); }
+  if(_nfLogin.npSaved) return show(t('Your new password is saved. Tap Back and log in with it.'));
+  if(!firebase.auth().currentUser||!_nfAuth) return show(t('Your sign-in has expired. Tap Back and log in again.'));
+  show(''); if(btn){ btn.disabled=true; btn.textContent=t('Saving…'); }
+  var email=_nfAuth&&_nfAuth.email, saved=false;
   try{
-    var email=_nfAuth&&_nfAuth.email;
-    await nfCall('setNewPassword',{newPassword:a});
+    await nfCall('setNewPassword',{newPassword:a}); saved=true;
     await firebase.auth().signInWithEmailAndPassword(email,a);    // old sessions were signed out by the server
     await nfAfterSignIn();
-  }catch(e){ show(nfErrText(e)); }
+  }catch(e){
+    if(saved){ _nfLogin.npSaved=true; show(t('Your new password is saved. Tap Back and log in with it.')); }   // never ask to save it twice
+    else show(nfErrText(e));
+  }
   finally{ if(btn){ btn.disabled=false; btn.textContent=t('Save and continue'); } }
 }
-async function nfSecureSignOut(){ try{ await firebase.auth().signOut(); }catch(e){} _nfAuth=null; }
+var _nfSignOutP=null;
+function nfSecureSignOut(){ _nfAuth=null; _nfSignOutP=(async function(){ try{ await firebase.auth().signOut(); }catch(e){} })(); return _nfSignOutP; }
 // change my own password (re-confirms the current one)
 async function nfChangeMyPassword(){
   if(!NF_SECURE||!firebase.auth().currentUser) return;
@@ -15394,7 +15406,7 @@ function nfShowTempPassword(name,identifier,pw,title){
 (function(){
   if(!NF_SECURE) return;
   document.documentElement.classList.add('nf-secure');
-  try{ if(NF_APPCHECK_SITE_KEY&&typeof firebase.appCheck==='function'){ firebase.appCheck().activate(NF_APPCHECK_SITE_KEY,true); } }catch(e){}
+  try{ if(NF_APPCHECK_SITE_KEY&&typeof firebase.appCheck==='function'){ firebase.appCheck().activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(NF_APPCHECK_SITE_KEY),true); } }catch(e){}
   nfSubmit=nfSecureSubmit;
   // automatic sign-in on return visits (Remember me), never with a stored password
   window.addEventListener('load',function(){
