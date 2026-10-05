@@ -15664,5 +15664,83 @@ async function nfBootstrap(){
 }
 </script>
 
+<script id="nf-back-button">
+// ── Phone Back button inside in-app browsers (One HealSol WebView) ──────────────
+// NQAS changes screens without page loads, so the host app saw no "previous page" and closed NQAS on Back.
+// Each move away from Today records one history step: Back closes an open pop-up first, then returns to the
+// previous tab. From Today with nothing open, Back leaves NQAS as before.
+(function(){
+  if(!window.history||!history.pushState) return;
+  var depth=0, ignore=0, tabs=[], silent=false;
+  function push(){ try{ history.pushState({nfBack:++depth},''); }catch(e){} }
+  function unwind(){ if(depth>0){ ignore++; var n=depth; depth=0; try{ history.go(-n); }catch(e){ ignore--; } } tabs=[]; }
+  window.nfBackReset=unwind;
+  function closeBtn(el){
+    var bs=[].slice.call(el.querySelectorAll('button,[role=button],.close,[class*=close]')).filter(function(b){ return b.offsetParent!==null; });
+    return bs.find(function(b){ var t=(b.textContent||'').trim(), a=(b.getAttribute('aria-label')||'')+' '+(b.title||'')+' '+(b.className||'');
+      return /^(✕|×|x|close|cancel|back|not now|बंद|रद्द|वापस)/i.test(t)||/close|cancel|dismiss/i.test(a); });
+  }
+  // the top-most pop-up covering most of the screen
+  function topOverlay(){
+    var vw=window.innerWidth, vh=window.innerHeight, best=null, bz=-1;
+    [].slice.call(document.body.children).forEach(function(el){
+      if(el.offsetParent===null&&getComputedStyle(el).position!=='fixed') return;
+      var cs=getComputedStyle(el); if(cs.position!=='fixed'||cs.display==='none'||cs.visibility==='hidden') return;
+      if(/^(nf-nav|toast|login-screen|cho-app|welcome-screen)$/.test(el.id||'')||el.classList.contains('nf-page')) return;   // NQAS screens are not pop-ups
+      var r=el.getBoundingClientRect(); if(r.width*r.height<vw*vh*0.6) return;
+      var z=parseInt(cs.zIndex,10)||0; if(z>=bz){ bz=z; best=el; }
+    });
+    return best;
+  }
+  function closeTop(){
+    var ov=topOverlay();
+    if(ov){ var b=closeBtn(ov); if(b) b.click(); else { try{ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); }catch(e){} if(ov.parentNode&&topOverlay()===ov) ov.remove(); } return true; }
+    if(typeof openHelpKey!=='undefined'&&openHelpKey){ var k=String(openHelpKey).split('-'); try{ showHelp(+k[0],+k[1]); }catch(e){} return true; }
+    return false;
+  }
+  window.addEventListener('popstate',function(){
+    if(ignore){ ignore--; return; }
+    if(depth>0) depth--;
+    if(closeTop()){ push(); return; }                                  // stay on this screen
+    if(typeof nfIsStaff==='function'&&nfIsStaff()&&tabs.length&&typeof nfTab==='function'){
+      silent=true; try{ nfTab(tabs.pop()); }finally{ silent=false; }
+    }
+  });
+  function hook(){
+    if(typeof nfTab!=='function'||nfTab.__nfBack) return !!(typeof nfTab==='function');
+    var o=nfTab; nfTab=function(tab){ var prev=typeof _nfTab!=='undefined'?_nfTab:null; var r=o.apply(this,arguments);
+      if(!silent&&typeof nfIsStaff==='function'&&nfIsStaff()&&prev&&_nfTab!==prev){
+        if(_nfTab==='today') unwind(); else { tabs.push(prev); push(); } }
+      return r; };
+    nfTab.__nfBack=true;
+    if(typeof nfSecureSignOut==='function'&&!nfSecureSignOut.__nfBack){ var s=nfSecureSignOut; nfSecureSignOut=function(){ unwind(); return s.apply(this,arguments); }; nfSecureSignOut.__nfBack=true; }
+    return true;
+  }
+  if(!hook()) window.addEventListener('load',hook);
+})();
+</script>
+<style id="nf-phone-fixes">
+/* ── Phone layout fixes: narrow screens and large phone text (Oct 2026) ── */
+.cp-text.struck{text-decoration:none;}                       /* a gap is not "done": the ½ / ✗ badge marks it */
+.cp-body,.scmt-t{overflow-wrap:break-word;}
+.scmt-t{min-width:0;}
+.phr{flex-wrap:wrap;} .phr em{white-space:nowrap;}
+.scb2-legend{flex-wrap:wrap;overflow-x:visible;}
+.cp-meta{flex-wrap:wrap;row-gap:4px;} .cp-meta > *{white-space:nowrap;}       /* each tag stays on one line */
+@media (max-width:480px){
+  .scmt-t{flex:1 1 100%;}                                    /* item text uses the full width… */
+  .scmt-b{flex:1 1 100%;}                                    /* …and Met / Not met share the next line */
+  .scmt-btn{flex:1 1 0;min-width:0;}
+  .cp-top-row{flex-wrap:wrap;}
+  .cp-top-row .cp-body{flex:1 1 calc(100% - 80px);}
+  .cp-top-row .cp-video-btn{order:9;margin-left:29px;}        /* Video goes under the title instead of squeezing it */
+  .cp-body .scmt{margin-left:-29px;margin-right:-39px;}       /* Met / Not met box uses the full card width */
+  .scmt-btn{white-space:nowrap;}
+}
+@media (max-width:420px){
+  .nf-rings.ph-st{flex-wrap:wrap;justify-content:center;}      /* My progress: legend under the ring */
+  .nf-rings.ph-st .nf-rl3{flex:1 1 100%;}
+}
+</style>
 </body>
 </html>
