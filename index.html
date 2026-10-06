@@ -15317,16 +15317,17 @@ async function nfSecureSubmit(){
   if(!id){ nfError(t('Please enter your mobile number or ID.')); return; }
   if(!pwd){ nfError(t('Please enter your password.')); return; }
   var key=nfSecureKey(id); if(!key){ nfError(t('Incorrect mobile number / ID or password.')); return; }
-  if(_nfSignOutP){ try{ await _nfSignOutP; }catch(e){} _nfSignOutP=null; }   // the previous person's sign-out must finish first
   _nfLogin.npSaved=false;
   var btn=document.getElementById('nf-btn'); _nfLogin.busy=true; if(btn){ btn.disabled=true; btn.textContent=t('Checking…'); }
   try{
+    if(_nfSignOutP){ var sp=_nfSignOutP; _nfSignOutP=null; await nfWithin(sp,3000).catch(function(){}); }   // previous sign-out: wait briefly, never forever
     if(!db){ initFirebase(); await new Promise(function(r){ setTimeout(r,300); }); }
     var remember=(document.getElementById('nf-remember')||{}).checked!==false;
     try{ await firebase.auth().setPersistence(remember?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION); }catch(e){}
-    try{ await firebase.auth().signInWithEmailAndPassword(key+'@'+NF_EMAIL_DOMAIN,pwd); }
-    catch(e){ nfError(nfAuthErr(e)); return; }
-    await nfAfterSignIn();
+    try{ await nfWithin(firebase.auth().signInWithEmailAndPassword(key+'@'+NF_EMAIL_DOMAIN,pwd),25000); }
+    catch(e){ nfError(e&&e.nfTimeout?t('Could not reach the server. Check your internet and try again.'):nfAuthErr(e)); return; }
+    nfCoverOn();
+    try{ await nfAfterSignIn(); } finally { nfCoverDone(); }
   } finally { _nfLogin.busy=false; if(btn){ btn.disabled=false; btn.textContent=t('Log in'); } }
 }
 async function nfAfterSignIn(){
@@ -15387,7 +15388,8 @@ async function nfSaveNewPassword(){
   finally{ if(btn){ btn.disabled=false; btn.textContent=t('Save and continue'); } }
 }
 var _nfSignOutP=null;
-function nfSecureSignOut(){ _nfAuth=null; _nfSignOutP=(async function(){ try{ await firebase.auth().signOut(); }catch(e){} })(); return _nfSignOutP; }
+function nfSecureSignOut(){ _nfAuth=null;
+  ['nf-id','nf-pwd'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); nfError(''); _nfSignOutP=(async function(){ try{ await firebase.auth().signOut(); }catch(e){} })(); return _nfSignOutP; }
 // change my own password (re-confirms the current one)
 async function nfChangeMyPassword(){
   if(!NF_SECURE||!firebase.auth().currentUser) return;
@@ -15425,8 +15427,9 @@ function nfShowTempPassword(name,identifier,pw,title){
     try{ if(!db) initFirebase(); }catch(e){}
     var done=false;
     firebase.auth().onAuthStateChanged(function(u){ if(done||!u) return; done=true;
+      if(_nfLogin.busy) return;                       // a login from the form is already opening the screen
       var ls=document.getElementById('login-screen'); if(ls&&ls.style.display==='none') return;
-      nfAfterSignIn().catch(function(e){ console.warn('[SC] auto sign-in',e); }); });
+      nfCoverOn(); nfAfterSignIn().catch(function(e){ console.warn('[SC] auto sign-in',e); }).then(nfCoverDone); });
     if(location.hash==='#setup') setTimeout(nfShowBootstrap,400);
   });
   // sign out of Firebase whenever someone logs out
@@ -15676,6 +15679,40 @@ async function nfBootstrap(){
 }
 </script>
 
+<script id="nf-open-cover">
+// ── While a screen opens after login, show a plain "Opening…" cover instead of the half-built old screen ──
+function nfWithin(p,ms){ return new Promise(function(res,rej){ var tm=setTimeout(function(){ var e=new Error('timeout'); e.nfTimeout=true; rej(e); },ms);
+  Promise.resolve(p).then(function(v){ clearTimeout(tm); res(v); },function(e){ clearTimeout(tm); rej(e); }); }); }
+var _nfCover={el:null,dash:false,timer:null};
+function nfCoverOn(){
+  _nfCover.dash=false; _nfCover.pending=false;
+  var c=_nfCover.el||document.getElementById('nf-open-cover-el');
+  if(!c){ c=document.createElement('div'); c.id='nf-open-cover-el';
+    c.innerHTML='<div class="nf-oc-spin"></div><div class="nf-oc-t">'+((typeof t==='function')?t('Opening…'):'Opening…')+'</div>'; document.body.appendChild(c); }
+  _nfCover.el=c; c.style.display='flex';
+  clearTimeout(_nfCover.timer); _nfCover.timer=setTimeout(nfCoverOff,12000);      // never stays longer than 12 s
+}
+function nfCoverOff(){ clearTimeout(_nfCover.timer); if(_nfCover.el) _nfCover.el.style.display='none'; }
+function nfCoverDone(){
+  if(_nfCover.pending&&!_nfCover.dash){ var n=0, iv=setInterval(function(){ if(_nfCover.dash||++n>100){ clearInterval(iv); _nfCover.pending=false; setTimeout(nfCoverOff,60); } },100); return; }
+  _nfCover.pending=false;
+  var ls=document.getElementById('login-screen');
+  if(ls&&ls.style.display!=='none'&&getComputedStyle(ls).display!=='none') return nfCoverOff();   // error, role picker or new-password screen
+  setTimeout(nfCoverOff,60);
+}
+(function(){
+  // HealSol dashboard: the cover stays until loading and drawing have finished
+  if(typeof scStartAdminApp==='function'){ var o=scStartAdminApp;
+    scStartAdminApp=function(){ _nfCover.dash=false; _nfCover.pending=true; var r=o.apply(this,arguments); Promise.resolve(r).then(function(){ _nfCover.dash=true; },function(){ _nfCover.dash=true; }); return r; }; }
+  try{ if(typeof HINDI_UI==='object') Object.assign(HINDI_UI,{'Opening…':'खुल रहा है…','Could not reach the server. Check your internet and try again.':'सर्वर से संपर्क नहीं हो सका। इंटरनेट जाँचें और फिर से कोशिश करें।'}); }catch(e){}
+})();
+</script>
+<style>
+#nf-open-cover-el{position:fixed;inset:0;z-index:9990;background:var(--bg,#F1F5F4);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+#nf-open-cover-el .nf-oc-spin{width:34px;height:34px;border-radius:50%;border:3px solid rgba(15,92,82,.18);border-top-color:#0F5C52;animation:nfocspin .8s linear infinite;}
+#nf-open-cover-el .nf-oc-t{font:600 14px/1.2 Poppins,system-ui,sans-serif;color:#0F5C52;}
+@keyframes nfocspin{to{transform:rotate(360deg)}}
+</style>
 <script id="nf-back-button">
 // ── Phone Back button inside in-app browsers (One HealSol WebView) ──────────────
 // NQAS changes screens without page loads, so the host app saw no "previous page" and closed NQAS on Back.
