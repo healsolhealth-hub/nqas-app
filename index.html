@@ -2741,12 +2741,24 @@ const FIREBASE_CONFIG = {
   appId:"1:282745702969:web:fa279bfdc881d155229be8"
 };
 
+var NF_APPCHECK_SITE_KEY='6Lf7xd8tAAAAACG20kXsbRb0-2dgg9eWvuEhJTjn';   // Fraud Defense (reCAPTCHA Enterprise) site key, registered in Firebase App Check
 let db=null;
+var _nfAppCheckOn=false;
+function nfStartAppCheck(){
+  if(_nfAppCheckOn) return;
+  try{
+    var key=(typeof NF_APPCHECK_SITE_KEY!=='undefined')?NF_APPCHECK_SITE_KEY:'';
+    if(!key||typeof firebase.appCheck!=='function'||!firebase.apps.length) return;
+    firebase.appCheck().activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(key),true);
+    _nfAppCheckOn=true;
+  }catch(e){ console.warn('App Check:',e&&e.message); }
+}
 function initFirebase(){
   try{
     if(typeof firebase==='undefined'){setTimeout(initFirebase,500);return;}
     if(db) return;
     firebase.initializeApp(FIREBASE_CONFIG);
+    nfStartAppCheck();                       // App Check must start right after the app, before the database is used
     db=firebase.database();
     console.log('Firebase connected ✓');
   }catch(e){
@@ -15267,7 +15279,7 @@ html.nf-secure #sc-add-pwd{display:none!important;}
 var NF_SECURE=!!(window.firebase&&typeof firebase.auth==='function'&&typeof firebase.functions==='function');
 var NF_EMAIL_DOMAIN='accounts.nqasfast.app';
 var NF_FN_REGION='asia-south1';
-var NF_APPCHECK_SITE_KEY='6Lf7xd8tAAAAACG20kXsbRb0-2dgg9eWvuEhJTjn';   // Fraud Defense (reCAPTCHA Enterprise) site key, registered in Firebase App Check
+// NF_APPCHECK_SITE_KEY is set next to FIREBASE_CONFIG (it must exist before Firebase starts)
 var NF_IDLE_MIN=30;
 var _nfAuth=null;                      // { uid, email, claims }
 Object.assign(HINDI_UI,{'Set your new password':'अपना नया पासवर्ड बनाएँ','New password':'नया पासवर्ड','Confirm new password':'नया पासवर्ड दोबारा',
@@ -15406,7 +15418,7 @@ function nfShowTempPassword(name,identifier,pw,title){
 (function(){
   if(!NF_SECURE) return;
   document.documentElement.classList.add('nf-secure');
-  try{ if(NF_APPCHECK_SITE_KEY&&typeof firebase.appCheck==='function'){ firebase.appCheck().activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(NF_APPCHECK_SITE_KEY),true); } }catch(e){}
+  nfStartAppCheck();   // no-op until Firebase has started; initFirebase() starts App Check
   nfSubmit=nfSecureSubmit;
   // automatic sign-in on return visits (Remember me), never with a stored password
   window.addEventListener('load',function(){
