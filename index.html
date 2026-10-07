@@ -1213,14 +1213,14 @@ textarea.scx-in{resize:vertical;min-height:70px;}
     <div class="lc-field">
       <label class="lc-label">Password</label>
       <input class="lc-input" id="sc-staff-pwd" type="password"
-        placeholder="Default: last 4 digits of mobile"
+        placeholder="Password"
         onkeydown="if(event.key==='Enter')scStaffLogin()"/>
     </div>
     <div class="lc-err" id="sc-staff-err"></div>
     <button class="lc-btn staff" id="sc-staff-btn" onclick="scStaffLogin()">
       <i class="ti ti-rocket" style="font-size:15px;"></i> Enter SC App
     </button>
-    <div class="lc-note">Your Facility ID and mobile are registered by your CHO. Default password is last 4 digits of your mobile number.</div>
+    <div class="lc-note">Your mobile is registered by your CHO. Use the temporary password you were given, then choose your own.</div>
     <button onclick="phcOpenDemoSignup()" style="width:100%;margin-top:10px;padding:11px;border-radius:12px;border:1.5px dashed var(--teal,#1E6B5E);background:rgba(30,107,94,0.08);color:var(--teal,#1E6B5E);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;">
       <i class="ti ti-rocket" style="font-size:14px;"></i> New facility? Register — first 7 days (Baseline) free
     </button>
@@ -1807,7 +1807,7 @@ textarea.scx-in{resize:vertical;min-height:70px;}
       <div class="sc-panel-body">
         <div style="background:var(--teal-lt);border-radius:9px;padding:9px 12px;margin-bottom:12px;border:1px solid rgba(30,107,94,0.2);font-size:11px;color:var(--teal-dk);font-weight:600;">
           <i class="ti ti-info-circle" style="font-size:12px;vertical-align:-2px;"></i>
-          Add staff with name and mobile. They login using Facility ID + mobile + password (default: last 4 digits of mobile).
+          Add staff with name and mobile. Each person gets a temporary password once, then logs in with their mobile number and chooses their own password.
         </div>
         <div id="sc-cho-staff-roster"></div>
       </div>
@@ -1941,7 +1941,7 @@ async function scStaffLogin(){
     }
     const expectedPwd = staffRec.password || mob.slice(-4);
     if(!nfAuthOK('staff',mob) && pwd !== expectedPwd){
-      err.textContent='Incorrect password. Default is the last 4 digits of your mobile.';err.classList.add('show');
+      err.textContent='Incorrect password. Use the password you were given, or tap Forgot? to get help.';err.classList.add('show');
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-rocket" style="font-size:15px;"></i> Enter SC App';}
       return;
     }
