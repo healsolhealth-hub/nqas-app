@@ -1583,10 +1583,9 @@ textarea.scx-in{resize:vertical;min-height:70px;}
     <div class="hs-only" style="background:var(--bgc);border-radius:14px;border:1px solid var(--br);padding:16px;margin-bottom:14px;">
       <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:12px;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:6px;"><i class="ti ti-building-plus" style="color:var(--teal);font-size:15px;"></i> Enroll New Facility</div>
       <div class="sc-enroll-grid">
-        <div><label class="lc-label">Facility ID *</label><input class="fc-add-input" id="sc-enroll-code" placeholder="UP-SC-001" style="width:100%;" autocapitalize="characters"/></div>
         <div><label class="lc-label">Facility Name *</label><input class="fc-add-input" id="sc-enroll-name" placeholder="Rampur Sub-Centre" style="width:100%;"/></div>
-        <div><label class="lc-label">District</label><input class="fc-add-input" id="sc-enroll-district" placeholder="District" style="width:100%;"/></div>
-        <div><label class="lc-label">State</label><input class="fc-add-input" id="sc-enroll-state" placeholder="State" style="width:100%;"/></div>
+        <div><label class="lc-label">State *</label><select class="fc-add-input" id="sc-enroll-state" style="width:100%;"></select></div>
+        <div><label class="lc-label">District *</label><input class="fc-add-input" id="sc-enroll-district" list="nf-enroll-districts" placeholder="Start typing…" autocomplete="off" style="width:100%;"/></div>
         <div><label class="lc-label">Programme</label>
           <select class="fc-add-input" id="sc-enroll-prog" style="width:100%;">
             <option value="nqas_12A">12A — 12 Services (60 days)</option>
@@ -1595,8 +1594,9 @@ textarea.scx-in{resize:vertical;min-height:70px;}
         </div>
         <div><label class="lc-label">CHO Name</label><input class="fc-add-input" id="sc-enroll-choname" placeholder="CHO Name" style="width:100%;"/></div>
         <div><label class="lc-label">CHO Mobile *</label><input class="fc-add-input" id="sc-enroll-chomob" type="tel" maxlength="10" inputmode="numeric" placeholder="10-digit mobile (CHO login)" style="width:100%;"/></div>
-        <div><label class="lc-label">CHO Password *</label><input class="fc-add-input" id="sc-enroll-chopwd" placeholder="Facility admin password" style="width:100%;" type="password"/></div>
+        <div><label class="lc-label">Govt. facility ID (NIN / HFR)</label><input class="fc-add-input" id="sc-enroll-nin" placeholder="Optional" maxlength="40" style="width:100%;"/></div>
       </div>
+      <div id="sc-enroll-idnote" style="font-size:11.5px;color:var(--t3);background:var(--bgs);border:1px dashed var(--br);border-radius:10px;padding:8px 11px;margin:-2px 0 12px;"><i class="ti ti-id" style="color:var(--teal);"></i> The Facility ID is created on save from the state and district — for example <b>UP-JHS-SC-0001</b> (running number per district, shared with self-registration). The CHO's login and a temporary password are shown once after enrolling.</div>
       <div style="margin-bottom:14px;">
         <label style="font-size:10px;font-weight:800;color:var(--t3);display:block;margin-bottom:5px;text-transform:uppercase;">Access Level</label>
         <div style="display:flex;gap:8px;">
@@ -15521,18 +15521,33 @@ function nfShowTempPassword(name,identifier,pw,title){
   };
   scEnrollFacility=async function(){
     var g=function(id){ return ((document.getElementById(id)||{}).value||'').trim(); };
-    var code=g('sc-enroll-code').toUpperCase(), name=g('sc-enroll-name'), choName=g('sc-enroll-choname'), choMob=g('sc-enroll-chomob'), progId=(document.getElementById('sc-enroll-prog')||{}).value||'nqas_12A';
-    if(!code||!name){ showToast('Facility ID and name are required.','err'); return; }
+    var name=g('sc-enroll-name'), state=g('sc-enroll-state'), district=g('sc-enroll-district'), choName=g('sc-enroll-choname'), choMob=g('sc-enroll-chomob').replace(/\D/g,''), progId=(document.getElementById('sc-enroll-prog')||{}).value||'nqas_12A';
+    if(!name){ showToast('Enter the facility name.','err'); return; }
+    if(!state||!district){ showToast('Choose the state and district — the Facility ID is made from them.','err'); return; }
     if(!/^\d{10}$/.test(choMob)){ showToast('Enter the CHO\'s 10-digit mobile number.','err'); return; }
-    if(await fbGet(scFacilityPath(code))){ showToast('Facility ID "'+code+'" already exists.','err'); return; }
     var access=(document.querySelector('input[name="enroll-access"]:checked')||{}).value||'contract';
-    var fac={name:name,district:g('sc-enroll-district'),state:g('sc-enroll-state'),progId:progId,choName:choName,enrolledAt:scNowIso(),active:true,suspended:false,subscriptionStatus:access,accessKeyVerified:true};
-    if(access==='trial') fac.trialStartDate=scNowIso();
-    if(!await fbSet(scFacilityPath(code),fac)){ showToast('Could not save the facility.','err'); return; }
-    try{ var r=await nfCall('createAccount',{kind:'staff',code:code,role:'CHO',mobile:choMob,name:choName||'CHO'}); nfShowTempPassword(choName||'CHO',r.identifier,r.tempPassword,name+' enrolled — CHO login'); }
-    catch(e){ showToast('Facility saved, but the CHO account failed: '+nfErrText(e),'err'); }
+    var btn=document.querySelector('[onclick="scEnrollFacility()"]'), old=btn?btn.innerHTML:'';
+    if(btn){ btn.disabled=true; btn.innerHTML='Enrolling…'; }
+    try{
+      var r=await nfCall('enrollFacility',{name:name,state:state,district:district,progId:progId,choName:choName||'CHO',choMobile:choMob,access:access,nin:g('sc-enroll-nin')});
+      ['sc-enroll-name','sc-enroll-district','sc-enroll-choname','sc-enroll-chomob','sc-enroll-nin'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+      var full=document.getElementById('enroll-access-full'); if(full){ full.checked=true; try{ enrollAccessToggle(); }catch(e){} }
+      if(r.tempPassword) nfShowTempPassword(choName||'CHO',r.identifier,r.tempPassword,name+' enrolled as '+r.code+' — CHO login');
+      else await scAlert(name+' is enrolled as '+r.code+'. The CHO ('+r.identifier+') already has a login — they use their existing password.','Facility enrolled','✅');
+      showToast('Enrolled: '+r.code,'ok');
+    }catch(e){ showToast(nfErrText(e),'err'); }
+    finally{ if(btn){ btn.disabled=false; btn.innerHTML=old; } }
     try{ await scLoadMasterData(); scRenderMasterDashboard(); }catch(e){}
   };
+  // State list and district suggestions on the enrol form (same list as self-registration)
+  window.nfEnrollPrepare=function(){
+    var st=document.getElementById('sc-enroll-state'); if(!st||typeof NF_STATE_LIST==='undefined') return;
+    var dl=document.getElementById('nf-enroll-districts'); if(!dl){ dl=document.createElement('datalist'); dl.id='nf-enroll-districts'; document.body.appendChild(dl); }
+    var fill=function(){ var c=(NF_STATE_LIST.find(function(x){ return x[0]===st.value; })||[])[1]; dl.innerHTML=(NF_DISTRICTS[c]||[]).map(function(n){ return '<option value="'+n+'">'; }).join(''); };
+    if(!st.options.length){ st.innerHTML=NF_STATE_LIST.map(function(x){ return '<option value="'+x[0]+'"'+(x[1]==='UP'?' selected':'')+'>'+x[0]+'</option>'; }).join(''); fill();
+      st.onchange=function(){ fill(); var d=document.getElementById('sc-enroll-district'); if(d) d.value=''; }; }
+  };
+  (function(){ var oA=nfAdminApply; nfAdminApply=function(){ try{ nfEnrollPrepare(); }catch(e){} return oA.apply(this,arguments); }; })();
   scAdminSetAccessKey=async function(){
     var key=((document.getElementById('sc-ak-input')||{}).value||'').trim(); if(!key){ showToast('Enter a key.','err'); return; }
     try{ await nfCall('setAccessKey',{key:key}); showToast('SC access key set.','ok'); }catch(e){ showToast(nfErrText(e),'err'); }
