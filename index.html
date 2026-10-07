@@ -16215,7 +16215,7 @@ function nfPdfProTagWidth(doc,tier){ if(!tier) return 0; doc.setFont(doc._nfFont
 function nfCertFileName(r){ return 'NQAS-FAST-Certificate-'+String(r.certId||'').replace(/[^A-Za-z0-9-]+/g,'-')+'-'+String(r.name||'').replace(/[^A-Za-z0-9]+/g,'-').slice(0,30)+'.pdf'; }
 async function nfCertDownload(r,btn){
   if(!r) return; var old=btn?btn.innerHTML:''; if(btn){ btn.disabled=true; btn.textContent='Preparing…'; }
-  try{ var doc=await nfCertPdf(r); doc.save(nfCertFileName(r)); showToast('Certificate saved as PDF.','ok'); }
+  try{ var doc=await nfCertPdf(r); nfDoneToast(await nfSaveDoc(doc,nfCertFileName(r))); }
   catch(e){ console.warn('[SC] certificate pdf',e); showToast(e&&e.message==='load'?'Could not load the PDF tool — check the internet connection.':'Could not make the PDF.','err'); }
   finally{ if(btn){ btn.disabled=false; btn.innerHTML=old; } }
 }
@@ -16478,6 +16478,31 @@ body.nf-admin:not(.nfv-business) .admin-main > [data-nfv="business"]{display:non
 var NF_PDF_URLS=[
   ['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js','https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'],
   ['https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js','https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js','https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js']];
+// ── saving files: normal browsers download directly; in-app web views (One HealSol app) get a one-time link that
+//    opens in the phone's browser, because those views ignore downloads (server: prepareDownload / fileDownload)
+function nfInWebView(){ if(window.NF_FORCE_WEBVIEW) return true; var ua=navigator.userAgent||'';
+  return /; wv\)/.test(ua)||(/(iPhone|iPad|iPod)/.test(ua)&&!/Safari\//.test(ua)); }
+async function nfBlobB64(blob){
+  if(blob&&blob.arrayBuffer){ var u=new Uint8Array(await blob.arrayBuffer()), out='', CH=0x8000; for(var i=0;i<u.length;i+=CH) out+=String.fromCharCode.apply(null,u.subarray(i,i+CH)); return btoa(out); }
+  return new Promise(function(res,rej){ var fr=new FileReader(); fr.onload=function(){ res(String(fr.result).split(',')[1]||''); }; fr.onerror=rej; fr.readAsDataURL(blob); }); }
+async function nfSaveBlob(blob,name){
+  var b64=await nfBlobB64(blob), r=await nfCall('prepareDownload',{name:name,b64:b64});
+  var old=document.getElementById('nf-dl-ov'); if(old) old.remove();
+  var hi=typeof _appLang!=='undefined'&&_appLang==='hi', ov=document.createElement('div'); ov.className='scx-ov open'; ov.id='nf-dl-ov';
+  ov.innerHTML='<div class="scx-box" style="max-width:380px;text-align:center;"><div style="font-size:34px;">📄</div>'
+    +'<div style="font-size:16px;font-weight:700;margin:6px 0 4px;">'+(hi?'आपकी फ़ाइल तैयार है':'Your file is ready')+'</div>'
+    +'<div style="font-size:12.5px;color:var(--t3,#64748B);word-break:break-all;margin-bottom:12px;">'+scEsc(name)+'</div>'
+    +'<a class="scx-btn" id="nf-dl-go" href="'+scEsc(r.url)+'" target="_blank" rel="noopener" style="display:block;text-decoration:none;padding:12px;font-size:14px;">⬇ '+(hi?'डाउनलोड करें':'Download')+'</a>'
+    +'<div style="font-size:11.5px;color:var(--t3,#64748B);margin:10px 0 4px;">'+(hi?'यह आपके फ़ोन के ब्राउज़र में खुलेगा और Downloads में सेव होगा। लिंक 10 मिनट तक चलेगा।':'Opens in your phone\'s browser and saves to Downloads. The link works for 10 minutes.')+'</div>'
+    +'<button type="button" class="scx-btn ghost" id="nf-dl-close" style="margin-top:6px;">'+(hi?'बंद करें':'Close')+'</button></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#nf-dl-close').onclick=function(){ ov.remove(); };
+  ov.querySelector('#nf-dl-go').addEventListener('click',function(){ setTimeout(function(){ if(document.body.contains(ov)) ov.remove(); },1500); });
+  return 'link';
+}
+async function nfSaveDoc(doc,name){ if(nfInWebView()) return nfSaveBlob(doc.output('blob'),name); doc.save(name); return 'browser'; }
+async function nfSaveWb(X,wb,name){ if(nfInWebView()){ var a=X.write(wb,{bookType:'xlsx',type:'array'}); return nfSaveBlob(new Blob([a],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name); } X.writeFile(wb,name); return 'browser'; }
+function nfDoneToast(how){ if(how==='browser') showToast(typeof _appLang!=='undefined'&&_appLang==='hi'?'डाउनलोड शुरू — अपना Downloads फ़ोल्डर देखें।':'Download started — check your Downloads folder.','ok'); }
 function nfLoadScriptAny(urls,ready){
   return new Promise(function(res,rej){ var i=0;
     (function next(){ if(ready()) return res(); if(i>=urls.length) return rej(new Error('load'));
@@ -16544,7 +16569,7 @@ async function nfReceiptPdf(r){
 }
 async function nfDownloadReceiptPdf(r,btn){
   var old=btn?btn.innerHTML:''; if(btn){ btn.disabled=true; btn.textContent='Preparing…'; }
-  try{ var doc=await nfReceiptPdf(r); doc.save('Receipt-'+String(r.receiptNo||'').replace(/[^A-Za-z0-9-]+/g,'-')+'.pdf'); showToast('Receipt saved as PDF.','ok'); }
+  try{ var doc=await nfReceiptPdf(r); nfDoneToast(await nfSaveDoc(doc,'Receipt-'+String(r.receiptNo||'').replace(/[^A-Za-z0-9-]+/g,'-')+'.pdf')); }
   catch(e){ console.warn('[SC] receipt pdf',e); showToast(e&&e.message==='load'?'Could not load the PDF tool — check the internet connection, or use Print.':'Could not make the PDF — use Print.','err'); }
   finally{ if(btn){ btn.disabled=false; btn.innerHTML=old; } }
 }
@@ -16654,7 +16679,7 @@ function nfBizFileName(D,ext){ return 'NQAS-FAST-business-report-'+(D.rg.from||D
 async function nfBizExcel(D){
   var X=await nfLoadXlsx(), wb=X.utils.book_new();
   nfBizSheets(D).forEach(function(s){ var ws=X.utils.aoa_to_sheet(s.rows); ws['!cols']=s.widths.map(function(w){ return {wch:w}; }); X.utils.book_append_sheet(wb,ws,s.name); });
-  X.writeFile(wb,nfBizFileName(D,'xlsx'));
+  return nfSaveWb(X,wb,nfBizFileName(D,'xlsx'));
 }
 // ── PDF: landscape A4, logos and page numbers on every page ──
 async function nfBizPdf(D){
@@ -16711,7 +16736,7 @@ async function nfBizPdf(D){
     doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.2); doc.line(L,H-10,R,H-10);
     doc.setFontSize(7); doc.setTextColor.apply(doc,GREY); doc.text('NQAS | FAST · by HealSol Academy · Confidential — HealSol internal · generated '+when,L,H-6);
     doc.text('Page '+i+' of '+n,R,H-6,{align:'right'}); }
-  doc.save(nfBizFileName(D,'pdf'));
+  return nfSaveDoc(doc,nfBizFileName(D,'pdf'));
 }
 // ── date range bar (dashboard and preview share one range) ──
 function nfBizRangeHTML(ctx){
@@ -16827,7 +16852,7 @@ function nfBizPvClose(){ var ov=document.getElementById('nf-bizpv'); if(ov) ov.r
 async function nfBizDownload(kind,btn){
   var D=_nfBd._pvD||nfBizData(), old=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.textContent='Preparing…'; }
-  try{ if(kind==='pdf') await nfBizPdf(D); else await nfBizExcel(D); showToast(kind==='pdf'?'PDF report downloaded.':'Excel report downloaded.','ok'); }
+  try{ nfDoneToast(kind==='pdf'?await nfBizPdf(D):await nfBizExcel(D)); }
   catch(e){ console.warn('[SC] business report',e); showToast(e&&e.message==='load'?'Could not load the '+(kind==='pdf'?'PDF':'Excel')+' tool — check the internet connection and try again.':'Could not prepare the report.','err'); }
   finally{ if(btn){ btn.disabled=false; btn.innerHTML=old; } }
 }
