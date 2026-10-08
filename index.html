@@ -6075,7 +6075,7 @@ function scDeny(what){
 }
 // Can the current actor write corrective actions for this facility?
 function scCanWriteFacility(code){
-  if(appMode==='sc-admin') return true;
+  if(appMode==='sc-admin') return false;   // HealSol views; the Supervisor (mentor) assigns corrective actions
   if(appMode==='sc-cho') return code===scSubAdminCode;
   if(appMode==='sc-supervisor') return scSupAllowed(code);
   return false;
@@ -9118,7 +9118,8 @@ async function scqEditSession(id,code){
   var pr=v.pair.split('|'), ch=_scq.champions[pr[1]]||(k==='champion'?_scq.me:{})||{};
   if(k==='champion'&&!scqChampionCan(pr[0])){ showToast('This facility is not allotted to you.','err'); return; }
   var a=scActor(), now=scNowIso();
-  var rec=Object.assign({},s||{},{code:pr[0],championId:pr[1],championName:ch.name||pr[1],supervisorId:ch.supervisorId||(s&&s.supervisorId)||'',
+  var fsup=((_scq.facs||{})[pr[0]]||(scMasterFacilities||{})[pr[0]]||{}).supervisorId;
+  var rec=Object.assign({},s||{},{code:pr[0],championId:pr[1],championName:ch.name||pr[1],supervisorId:fsup||ch.supervisorId||(s&&s.supervisorId)||'',
     startAt:new Date(v.date+'T'+v.time).toISOString(),durationMin:parseInt(v.durationMin,10),link:v.link.trim(),
     dayFrom:parseInt(v.dayFrom,10),dayTo:parseInt(v.dayTo,10),note:(v.note||'').trim(),updatedAt:now,updatedBy:a.name});
   delete rec.id;
@@ -9325,7 +9326,7 @@ async function scqOpenSummary(id){
   if(k==='supervisor'&&(s.supervisorId!==_scSup.id||!scSupAllowed(s.code))){ showToast('This session belongs to another Supervisor.','err'); return; }
   _scq.sessions[id]=s;
   var sm=s.summary||{}, res=s.results||{}, progId=((_scq.facs[s.code]||(scMasterFacilities||{})[s.code]||{}).progId)||'nqas_12A';
-  var canDecide=(k==='supervisor'||k==='healsol')&&s.status==='submitted';
+  var canDecide=k==='supervisor'&&s.status==='submitted';
   var tiles=[['Reviewed',sm.reviewed||0],['Confirmed',sm.confirmed||0],['Needs work',sm.needs||0],['Differing scores',sm.differing||0],['Actions',sm.actions||0],['Attendance',sm.attendance||0]];
   var rows=(sm.items||[]).map(function(it){
     var r=res[it.key]||{}, cp=((scDayDef(progId,it.di)||{}).cps||[])[it.ci]||{};
@@ -9415,6 +9416,7 @@ async function scqOpenReviews(tab){
 }
 function scqReviewActions(s){
   var p=scqPhase(s), I=scJs(s.id), a='';
+  if(scqActorKind()==='healsol') return (p==='submitted'||p==='approved')?'<button class="scx-btn sm ghost" onclick="scqOpenSummary(\''+I+'\')"><i class="ti ti-file-text"></i> Summary</button>':'';   // view only
   if(p==='proposed') a+='<button class="scx-btn sm" onclick="scqApproveSchedule(\''+I+'\')"><i class="ti ti-check"></i> Approve</button>';
   if(['proposed','upcoming','live','ended','missed','returned'].indexOf(p)>=0) a+='<button class="scx-btn sm ghost" onclick="scqEditSession(\''+I+'\')"><i class="ti ti-pencil"></i> Edit</button>';
   if(['proposed','upcoming','live','ended','missed','returned'].indexOf(p)>=0) a+='<button class="scx-btn sm danger" onclick="scqCancelSession(\''+I+'\')"><i class="ti ti-ban"></i> Cancel</button>';
@@ -9428,7 +9430,7 @@ function scqRenderReviews(){
   var k=scqActorKind(), all=scqVisibleSessions(), pend=scqPending();
   var tabs=[['approve','Needs approval ('+pend.length+')'],['calendar','Calendar'],['load','Champion load']].concat(k==='healsol'?[['records','Records & hours']]:[]);
   var h='<div class="scx-tabs" style="margin-bottom:12px;">'+tabs.map(function(t){ return '<button class="scx-tab'+(_scqTab===t[0]?' on':'')+'" onclick="scqSetTab(\''+t[0]+'\')">'+scEsc(t[1])+'</button>'; }).join('')+'</div>'
-    +'<button class="scx-btn" style="width:100%;margin-bottom:12px;" onclick="scqEditSession(null)"><i class="ti ti-calendar-plus"></i> Schedule a session</button>';
+    +(k==='healsol'?'<div class="scrv-intro">View only — Supervisors schedule and approve Peer Review sessions. To move a facility to another Supervisor or Champion, use Setup → Hand over a facility.</div>':'<button class="scx-btn" style="width:100%;margin-bottom:12px;" onclick="scqEditSession(null)"><i class="ti ti-calendar-plus"></i> Schedule a session</button>');
   if(_scqTab==='approve'){
     var prop=pend.filter(function(s){ return s.status==='proposed'; }), sub=pend.filter(function(s){ return s.status==='submitted'; });
     h+='<div class="scq-sec"><div class="scq-sec-t"><i class="ti ti-calendar-question"></i> Proposed sessions ('+prop.length+')</div>'+(prop.map(function(s){ return scqSessionRow(s,scqReviewActions(s)); }).join('')||'<div class="scx-empty">Nothing waiting.</div>')+'</div>'
@@ -17642,10 +17644,18 @@ function nfBlActor(){
   if(appMode==='sc-champion'&&typeof _scq!=='undefined'&&_scq.me) return {name:_scq.me.name||_scq.me.id,id:_scq.me.id,role:'Quality Champion'};
   var a=scActor()||{}; return {name:a.name||'',id:a.id||a.mob||'',role:appMode==='sc-admin'?'HealSol Admin':'Supervisor'};
 }
+// Quality Champion: review + approve. Supervisor: review + approve where the facility has no active Champion,
+// otherwise spot-check only (agree / override items; the Champion approves). HealSol Admin: view only.
 function nfBlCanReview(code){
   if(appMode==='sc-champion') return typeof scqChampionCan==='function'&&scqChampionCan(code);
   if(appMode==='sc-supervisor') return typeof scIsDistrict==='function'&&!scIsDistrict()&&scSupAllowed(code);
-  return appMode==='sc-admin';
+  return false;
+}
+function nfBlCanView(code){ return nfBlCanReview(code)||appMode==='sc-admin'||(appMode==='sc-supervisor'&&scSupAllowed(code)); }
+function nfBlCanApprove(code){
+  if(appMode==='sc-champion') return nfBlCanReview(code);
+  if(appMode==='sc-supervisor') return nfBlCanReview(code)&&!(typeof scHasChampion==='function'&&scHasChampion(code));
+  return false;
 }
 async function nfBlLoad(code){
   var r=await Promise.all([fbGet(scFacilityPath(code)),fbGet('sc_progress/'+code)]); var f=r[0]; if(!f) return null;
@@ -17732,7 +17742,7 @@ async function nfBlSet(mob,di,ci,k,v,r){
   W.why=null; nfBlRender();
 }
 async function nfBlApprove(){
-  var W=_nfBl; if(!W) return;
+  var W=_nfBl; if(!W) return; if(!W.canApprove){ showToast('The Quality Champion approves this facility\'s baseline days.','err'); return; }
   var items=nfBlItems(W.ctx,W.di), mobs={}; items.forEach(function(x){ mobs[x.mob]=1; });
   var checked=items.filter(function(x){ return x.rev; }).length, changed=items.filter(nfBlChanged).length;
   var left=W.pick.filter(function(x){ var y=items.find(function(z){ return z.mob===x.mob&&z.ci===x.ci&&z.k===x.k; }); return y&&!y.rev; }).length;
@@ -17752,12 +17762,13 @@ async function nfBlRefreshIns(code){ var hs=Object.keys(_scIns||{}).filter(funct
   for(var i=0;i<hs.length;i++){ var st=_scIns[hs[i]]; await scMountInsights(hs[i],{code:code,fac:st.fac,staff:st.staff,tab:st.tab}); } }
 // ── review screen ──────────────────────────────────────────────
 async function nfBlOpen(code,di,via,sid){
-  if(!nfBlCanReview(code)){ showToast('Only the facility\'s Quality Champion or Supervisor can review the baseline.','err'); return; }
+  if(!nfBlCanView(code)){ showToast('Only the facility\'s Quality Champion or Supervisor can review the baseline.','err'); return; }
+  if(appMode==='sc-supervisor'){ try{ await scqLoadChampions(); }catch(e){} }
   if(!nfBlIsDay(di)){ showToast('Baseline review covers Days 1–7 only.','err'); return; }
   var ctx=await nfBlLoad(code); if(!ctx){ showToast('Facility not found.','err'); return; }
   var items=nfBlItems(ctx,di); if(!items.length){ showToast('No staff card for Day '+(di+1)+' is marked done yet.','err'); return; }
-  var flags=nfBlFlags(ctx,di,items), seed=code+'|'+di+'|'+(ctx.fac.startDate||'');   // same 20 for the Champion and the Supervisor
-  _nfBl={ctx:ctx,di:di,via:via==='session'?'session':'visit',sid:sid||null,flags:flags,why:null,tab:'pick',pick:nfBlPick(items,flags,seed).map(function(x){ return {mob:x.mob,ci:x.ci,k:x.k}; })};
+  var flags=nfBlFlags(ctx,di,items), seed=code+'|'+di+'|bl';   // same 20 for the Champion and the Supervisor (stable even if the start date is corrected)
+  _nfBl={ctx:ctx,di:di,via:via==='session'?'session':'visit',sid:sid||null,flags:flags,why:null,tab:'pick',ro:!nfBlCanReview(code),canApprove:nfBlCanApprove(code),pick:nfBlPick(items,flags,seed).map(function(x){ return {mob:x.mob,ci:x.ci,k:x.k}; })};
   nfBlRender();
 }
 function nfBlClose(){ var o=document.getElementById('nfbl-ov'), W=_nfBl; if(o) o.remove(); _nfBl=null; if(W&&appMode!=='sc-champion') nfBlRefreshIns(W.ctx.code).catch(function(){}); }
@@ -17771,13 +17782,14 @@ function nfBlItemHTML(x,fl){
     +'<div class="nfbl-show">📷 Ask to show this on camera / on site</div>'
     +'<div class="nfbl-row"><span class="nfbl-st '+(met?'m':'n')+'">'+(met?'Met':'Not met')+'</span>'
     +(x.self!==x.v?'<span class="nfbl-st" style="background:#F1F5F9;color:#475569;">staff said '+((x.k==='s'?x.self===2:x.self===1)?'Met':'Not met')+'</span>':'');
-  if(met) h+='<button class="nfbl-b ok" onclick="nfBlSet('+J+','+on+',\'ok\')">✓ Correct</button><button class="nfbl-b no'+(why?' on':'')+'" onclick="_nfBl.why=_nfBl.why===\''+key+'\'?null:\''+key+'\';nfBlRender()">✗ Not met</button>';
+  if(_nfBl.ro){ h+='</div>'; }
+  else if(met) h+='<button class="nfbl-b ok" onclick="nfBlSet('+J+','+on+',\'ok\')">✓ Correct</button><button class="nfbl-b no'+(why?' on':'')+'" onclick="_nfBl.why=_nfBl.why===\''+key+'\'?null:\''+key+'\';nfBlRender()">✗ Not met</button>';
   else h+='<button class="nfbl-b ok" onclick="nfBlSet('+J+','+on+',\'inplace\')">'+(chg?'↩ Back to Met':'✓ Actually in place')+'</button><button class="nfbl-b" onclick="nfBlSet('+J+','+off+',\'ok\')">'+(chg?'✓ Agree — Not met':'Correct as Not met')+'</button>';
-  h+='</div>';
-  if(why) h+='<div class="nfbl-why">'+['notseen','incomplete','explain','notfunc'].map(function(r){ return '<button onclick="nfBlSet('+J+','+off+',\''+r+'\')">'+scEsc(NF_BL_WHY[r])+'</button>'; }).join('')+'</div>';
+  if(!_nfBl.ro) h+='</div>';
+  if(why&&!_nfBl.ro) h+='<div class="nfbl-why">'+['notseen','incomplete','explain','notfunc'].map(function(r){ return '<button onclick="nfBlSet('+J+','+off+',\''+r+'\')">'+scEsc(NF_BL_WHY[r])+'</button>'; }).join('')+'</div>';
   if(x.rev){ var rv=x.rev, who=function(e){ return scEsc(e.by||'')+(e.role?' ('+scEsc(e.role)+')':''); }, via=function(e){ return e.via==='visit'?'field visit':'live session'; };
-    h+='<div class="nfbl-done'+(chg?' c':'')+'">'+(chg?'Changed by '+who(rv)+' · '+scEsc(NF_BL_WHY[rv.r]||rv.r||'')+' · '+via(rv):'Checked by '+who(rv)+' · '+scEsc(rv.r==='ok'?'correct as scored':(NF_BL_WHY[rv.r]||rv.r||''))+' · '+via(rv))
-      +(rv.conf?'<br>✓ Confirmed by '+who(rv.conf)+' · '+via(rv.conf):'')+'</div>'; }
+    h+='<div class="nfbl-done'+(chg?' c':'')+'">'+(chg?'Changed by '+who(rv)+' · '+scEsc(NF_BL_WHY[rv.r]||rv.r||''):'Checked by '+who(rv)+' · '+scEsc(rv.r==='ok'?'correct as scored':(NF_BL_WHY[rv.r]||rv.r||'')))
+      +(rv.conf?'<br>✓ Confirmed by '+who(rv.conf):'')+'</div>'; }
   return h+'</div>';
 }
 function nfBlTabsHTML(W,n){
@@ -17806,12 +17818,14 @@ function nfBlRender(){
   ov.innerHTML='<div class="scx-box" style="max-height:92vh;overflow:auto;">'
     +'<div class="nfbl-hd"><div><b>Baseline review · Day '+(W.di+1)+'</b><small>'+scEsc(f.name||W.ctx.code)+' · '+scEsc(W.ctx.code)+' · '+scEsc(scDayDef(W.ctx.progId,W.di).title||'')+'</small></div>'
     +'<span class="nfbl-via'+(W.via==='visit'?' visit':'')+'">'+(W.via==='visit'?'🚶 Field visit':'🎥 Live session')+'</span></div>'
-    +(appr?'<div class="nfbl-badge g">✓ Approved — you can still correct items until Day '+NF_BL.autoDay+'</div>':'')
-    +'<div class="nfbl-tip">Ask the staff member to <b>show</b> each item'+(W.via==='visit'?'':' on camera')+'. Tap <b>✓ Correct</b> if you saw it, or <b>✗ Not met</b> with a reason. Items you don\'t touch keep the staff score. Your change becomes the facility\'s baseline.</div>'
+    +(appr?'<div class="nfbl-badge g">✓ Approved'+(W.ro?'':' — you can still correct items until Day '+NF_BL.autoDay)+'</div>':'')
+    +(W.ro?'<div class="nfbl-tip" style="background:#EFF6FF;color:#1E40AF;">View only — the facility\'s Quality Champion or Supervisor reviews the baseline. You can see every check and change here.</div>'
+      :(!W.canApprove?'<div class="nfbl-tip" style="background:#EFF6FF;color:#1E40AF;">Spot-check — this facility has a Quality Champion, who approves the day. You can agree with or override any item.</div>':''))
+    +(W.ro?'':'<div class="nfbl-tip">Ask the staff member to <b>show</b> each item'+(W.via==='visit'?'':' on camera')+'. Tap <b>✓ Correct</b> if you saw it, or <b>✗ Not met</b> with a reason. Items you don\'t touch keep the staff score. Your change becomes the facility\'s baseline.</div>')
     +nfBlTabsHTML(W,{pick:pick.length,pickLeft:pick.filter(function(x){ return !x.rev; }).length,checked:checked,changed:changed,all:items.length,met:metN})
     +(flagged.length&&W.tab==='pick'?'<div class="nfbl-tip" style="background:#FFFBEB;color:#92400E;">⚑ Red flags — '+flagged.join(' · ')+'</div>':'')
     +nfBlListHTML(W,items,pick,pk,byStaff)
-    +'<div class="nfbl-foot"><button class="scx-btn" onclick="nfBlApprove()"><i class="ti ti-circle-check"></i> '+(appr?'Approve again':'Approve Day '+(W.di+1))+'</button><button class="scx-btn ghost" onclick="nfBlClose()">Close</button></div></div>';
+    +'<div class="nfbl-foot">'+(W.canApprove?'<button class="scx-btn" onclick="nfBlApprove()"><i class="ti ti-circle-check"></i> '+(appr?'Approve again':'Approve Day '+(W.di+1))+'</button>':'')+'<button class="scx-btn ghost" onclick="nfBlClose()">Close</button></div></div>';
   document.body.appendChild(ov); try{ ov.querySelector('.scx-box').scrollTop=sc; }catch(e){}
 }
 // ── entry points ───────────────────────────────────────────────
@@ -17842,7 +17856,7 @@ async function nfBlPlanSessions(code){
   Object.keys(_scq.sessions||{}).forEach(function(id){ var s=_scq.sessions[id]; if(s&&s.code===code&&s.status!=='cancelled') for(var d=+s.dayFrom;d<=+s.dayTo;d++) have[d]=1; });
   for(var day=1;day<=SC_BASELINE_DAYS;day++){ if(have[day]) continue;
     var date=scAddDays(f.startDate,day); if(date<scTodayStr()) continue;
-    var rec=scClean({code:code,championId:_scq.me.id,championName:ch.name||_scq.me.id,supervisorId:ch.supervisorId||'',kind:'baseline',
+    var rec=scClean({code:code,championId:_scq.me.id,championName:ch.name||_scq.me.id,supervisorId:f.supervisorId||ch.supervisorId||'',kind:'baseline',
       startAt:new Date(date+'T'+v.time).toISOString(),durationMin:30,link:v.link.trim(),dayFrom:day,dayTo:day,note:'Baseline review — Day '+day,status:'proposed',createdAt:now,createdBy:_scq.me.name||_scq.me.id,createdByRole:'Quality Champion',updatedAt:now,updatedBy:_scq.me.name||_scq.me.id});
     var sid=scUid('rs'); if(await fbSet('sc_review_sessions/'+sid,rec)){ _scq.sessions[sid]=rec; n++; } }
   showToast(n?n+' session'+(n===1?'':'s')+' sent to your Supervisor for approval.':'Every remaining baseline day already has a session.','ok');
@@ -17872,9 +17886,9 @@ async function nfBlPlanSessions(code){
   if(typeof scBaselineHTML==='function'){ var oB=scBaselineHTML;
     scBaselineHTML=function(st){ var h=oB.apply(this,arguments);
       try{ var ctx={code:st.code,fac:st.fac||{},progId:st.progId,roster:st.staff||{},progress:st.progress||{}}, S=nfBlSummary(ctx), nt=nfBlNoteText(S);
-        var can=(appMode==='sc-supervisor'||appMode==='sc-admin')&&nfBlCanReview(st.code);
+        var can=(appMode==='sc-supervisor'||appMode==='sc-admin')&&nfBlCanView(st.code);
         var blk='<div class="nfbl-box"><span class="nfbl-badge'+(nt.g?' g':'')+'">'+scEsc(nt.t)+'</span>'
-          +'<small>The baseline is self-assessed by staff and checked by the Quality Champion'+(can?' (or by you where there is no Champion)':'')+'. Only the reviewed score is used in reports.</small>'
+          +'<small>The baseline is self-assessed by staff and checked by the Quality Champion'+(appMode==='sc-supervisor'&&can?' (or by you where there is no Champion)':'')+'. Only the reviewed score is used in reports.'+(appMode==='sc-admin'?' Tap a day to view the checks (view only).':'')+'</small>'
           +nfBlDaysHTML(ctx,can?"nfBlOpen('"+scJs(st.code)+"',%D,'visit')":null)+'</div>';
         var i=h.indexOf('<div class="scd-days">'); return i>=0?h.slice(0,i)+blk+h.slice(i):blk+h; }catch(e){ return h; } }; }
 })();
@@ -17909,6 +17923,105 @@ async function nfBlPlanSessions(code){
     return r; };
 })();
 Object.assign(HINDI_UI,{'Changed to Met':'Met किया गया','Changed to Not met':'Not met किया गया','Checked — correct':'जाँचा — सही','This baseline card has been reviewed and cannot be redone.':'यह बेसलाइन कार्ड जाँचा जा चुका है, दोबारा नहीं किया जा सकता।'});
+</script>
+
+<!-- ══ HealSol Admin: view only for facility work; hand over a facility to another Supervisor / Champion ══ -->
+<style id="nf-ho-css">
+.nf-ho{background:#fff;border:1px solid var(--br);border-radius:16px;padding:16px;margin:14px 0;}
+.nf-ho h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px;} .nf-ho > p{margin:0 0 10px;font-size:12.5px;color:var(--t3);line-height:1.5;}
+.nf-ho label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin:10px 0 4px;}
+.nf-ho select{width:100%;border:1.5px solid var(--br);border-radius:10px;padding:9px 10px;font:inherit;font-size:13px;background:#fff;}
+.nf-ho .cur{font-size:12px;color:var(--t2);background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:6px;line-height:1.5;}
+.nf-ho .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;} @media(max-width:700px){ .nf-ho .two{grid-template-columns:1fr;} }
+.nf-ho .box{border:1px solid var(--br);border-radius:12px;padding:10px 12px;}
+.nf-ho .box b{font-size:13px;} .nf-ho .scx-btn{margin-top:10px;width:100%;}
+.nf-ho .hist{font-size:11.5px;color:var(--t3);margin-top:10px;line-height:1.6;}
+</style>
+<script id="nf-ho">
+// ── HealSol Admin is view only for work that belongs to Supervisors / Champions / staff ──
+(function(){
+  var VIEW='View only — this is done by the facility\'s Supervisor or Quality Champion.';
+  // card verification (Review cards): read-only for HealSol
+  if(typeof scQvIsOversight==='function'){ var oO=scQvIsOversight; scQvIsOversight=function(code){ if(appMode==='sc-admin') return true; return oO.apply(this,arguments); }; }
+  if(typeof scVGuard==='function'){ var oG=scVGuard; scVGuard=function(code){ if(appMode==='sc-admin'){ showToast('View only — Supervisors (and the CHO / MO for ANM, ASHA, MPW cards) verify cards.','err'); return null; } return oG.apply(this,arguments); }; }
+  if(typeof scVStaffHTML==='function'){ var oS=scVStaffHTML; scVStaffHTML=function(){ var h=oS.apply(this,arguments);
+    if(appMode==='sc-admin'&&h) h=h.replace(/View only — this facility's cards are verified by its Qu[^<]*/,'View only — cards are verified by the Supervisor, the Quality Champion or the CHO / MO, not by HealSol.'); return h; }; }
+  // Peer Review sessions: HealSol cannot schedule, approve, return, cancel or finalise
+  ['scqEditSession','scqApproveSchedule','scqCancelSession','scqApproveSummary','scqReturnSummary','scqFinalize'].forEach(function(fn){ var o=window[fn]; if(typeof o!=='function') return;
+    window[fn]=function(){ if(appMode==='sc-admin'){ showToast('View only — Supervisors schedule and approve Peer Review sessions.','err'); return; } return o.apply(this,arguments); }; });
+})();
+// ── Hand over a facility (HealSol Setup) ──────────────────────
+var _nfHo={sups:{},champs:{},facs:{}};
+async function nfHoLoad(){
+  var r=await Promise.all([fbGet('sc_supervisors'),fbGet('sc_champions'),fbGet('sc_facilities')]);
+  _nfHo={sups:r[0]||{},champs:r[1]||{},facs:r[2]||{}}; return _nfHo;
+}
+function nfHoSupsOf(code){ return Object.keys(_nfHo.sups).filter(function(id){ var s=_nfHo.sups[id]; return s&&!s.disabled&&s.facilities&&s.facilities[code]; }); }
+function nfHoChampsOf(code){ return Object.keys(_nfHo.champs).filter(function(m){ var c=_nfHo.champs[m]; return c&&!c.disabled&&c.facilities&&c.facilities[code]; }); }
+function nfHoActive(c){ return Object.keys((c&&c.facilities)||{}).filter(function(k){ return c.facilities[k]&&_nfHo.facs[k]&&!_nfHo.facs[k].suspended&&!_nfHo.facs[k].migratedTo; }); }
+async function nfEnsureHandover(){
+  if(appMode!=='sc-admin') return; var main=document.querySelector('#admin-app .admin-main'); if(!main||document.getElementById('nf-ho-card')) return;
+  var c=document.createElement('div'); c.id='nf-ho-card'; c.className='nf-ho'; c.dataset.nfv='setup';
+  c.innerHTML='<h3><i class="ti ti-users"></i> Hand over a facility</h3><p>When a Supervisor or Quality Champion is unavailable during the programme, move the facility to someone else. Access moves at once; their open and planned Peer Review sessions move too; everything already done keeps the original names.</p><div id="nf-ho-body" class="cur">Loading…</div>';
+  main.appendChild(c); await nfHoLoad(); nfHoRender();
+}
+function nfHoRender(code){
+  var body=document.getElementById('nf-ho-body'); if(!body) return; body.className='';
+  var codes=Object.keys(_nfHo.facs).filter(function(k){ var f=_nfHo.facs[k]; return f&&!f.migratedTo; }).sort(function(a,b){ return String(_nfHo.facs[a].name||a).localeCompare(String(_nfHo.facs[b].name||b)); });
+  code=code||(document.getElementById('nf-ho-fac')||{}).value||codes[0]||'';
+  var name=function(id,map){ var x=map[id]||{}; return (x.name||id); };
+  var sups=nfHoSupsOf(code), chs=nfHoChampsOf(code), f=_nfHo.facs[code]||{}, d=typeof nfDayOf==='function'?nfDayOf(f):null;
+  var supOpts=Object.keys(_nfHo.sups).filter(function(id){ return !_nfHo.sups[id].disabled&&sups.indexOf(id)<0; }).map(function(id){ return '<option value="'+scEsc(id)+'">'+scEsc(name(id,_nfHo.sups))+' · '+nfHoActive(_nfHo.sups[id]).length+' facilities</option>'; }).join('');
+  var chOpts=Object.keys(_nfHo.champs).filter(function(m){ return !_nfHo.champs[m].disabled&&chs.indexOf(m)<0; }).map(function(m){ var n=nfHoActive(_nfHo.champs[m]).length; return '<option value="'+scEsc(m)+'">'+scEsc(name(m,_nfHo.champs))+' · '+n+' active SC'+(n===1?'':'s')+(n>=2?' (full)':'')+'</option>'; }).join('');
+  var hist=Object.keys(f.handovers||{}).map(function(k){ return f.handovers[k]; }).sort(function(a,b){ return String(b.at).localeCompare(String(a.at)); }).slice(0,5);
+  body.innerHTML='<label for="nf-ho-fac">Facility</label><select id="nf-ho-fac" onchange="nfHoRender(this.value)">'+codes.map(function(k){ return '<option value="'+scEsc(k)+'"'+(k===code?' selected':'')+'>'+scEsc(_nfHo.facs[k].name||k)+' · '+scEsc(k)+'</option>'; }).join('')+'</select>'
+    +'<div class="cur">'+(d!=null&&d>0?'Day '+d+' of 60':'Not started')+' · Supervisor: <b>'+scEsc(sups.map(function(id){ return name(id,_nfHo.sups); }).join(', ')||'none')+'</b> · Quality Champion: <b>'+scEsc(chs.map(function(m){ return name(m,_nfHo.champs); }).join(', ')||'none')+'</b></div>'
+    +'<div class="two" style="margin-top:12px;"><div class="box"><b>New Supervisor</b><label for="nf-ho-sup">Hand over to</label><select id="nf-ho-sup"><option value="">Choose…</option>'+supOpts+'</select>'
+    +'<button class="scx-btn" onclick="nfHoSupervisor()"><i class="ti ti-refresh"></i> Hand over Supervisor</button></div>'
+    +'<div class="box"><b>New Quality Champion</b><label for="nf-ho-ch">Hand over to</label><select id="nf-ho-ch"><option value="">Choose…</option>'+chOpts+'</select>'
+    +'<button class="scx-btn" onclick="nfHoChampion()"><i class="ti ti-refresh"></i> Hand over Champion</button></div></div>'
+    +(hist.length?'<div class="hist"><b>Earlier hand-overs</b><br>'+hist.map(function(h){ return scEsc(scFmtDate(h.at))+' · '+scEsc(h.kind==='sup'?'Supervisor':'Champion')+': '+scEsc(h.fromName||'—')+' → '+scEsc(h.toName||'')+(h.note?' — '+scEsc(h.note):''); }).join('<br>')+'</div>':'');
+}
+async function nfHoSessions(code,fn){   // open / planned sessions of this facility
+  var all=await fbGet('sc_review_sessions')||{}, n=0;
+  for(var id in all){ var s=all[id]; if(!s||s.code!==code||['proposed','scheduled','returned','submitted'].indexOf(s.status)<0) continue;
+    var upd=fn(s); if(upd){ upd.updatedAt=scNowIso(); try{ await db.ref('sc_review_sessions/'+id).update(upd); n++; }catch(e){} } }
+  return n;
+}
+async function nfHoSupervisor(){
+  var code=(document.getElementById('nf-ho-fac')||{}).value, to=(document.getElementById('nf-ho-sup')||{}).value; if(!code||!to){ showToast('Choose the facility and the new Supervisor.','err'); return; }
+  var from=nfHoSupsOf(code), f=_nfHo.facs[code]||{}, toN=(_nfHo.sups[to]||{}).name||to, fromN=from.map(function(id){ return (_nfHo.sups[id]||{}).name||id; }).join(', ');
+  var v=await scDialog({title:'Hand over Supervisor',icon:'🔁',okLabel:'Hand over',message:(f.name||code)+'\n'+(fromN||'No Supervisor')+'  →  '+toN+'\n\nThe new Supervisor gets access now. Open and planned Peer Review sessions move to them. Actions and approvals already done keep the original names.',
+    fields:[{key:'note',label:'Reason (optional)',placeholder:'e.g. on leave until 30 Oct'}]}); if(!v) return;
+  var upd={}, now=scNowIso(); from.forEach(function(id){ upd['sc_supervisors/'+id+'/facilities/'+code]=null; });
+  upd['sc_supervisors/'+to+'/facilities/'+code]=true; upd['sc_facilities/'+code+'/supervisorId']=to;
+  upd['sc_facilities/'+code+'/handovers/'+scUid('ho')]=scClean({kind:'sup',from:from.join(','),fromName:fromN,to:to,toName:toN,at:now,by:'HealSol Admin',note:(v.note||'').trim()});
+  try{ await db.ref().update(upd); }catch(e){ showToast('Could not hand over — check connection.','err'); return; }
+  var n=await nfHoSessions(code,function(s){ return s.supervisorId!==to?{supervisorId:to}:null; });
+  // a Champion whose facilities are now all with the new Supervisor moves with them (Champion load, defaults)
+  for(var m in _nfHo.champs){ var c=_nfHo.champs[m]; if(!c||!c.facilities||!c.facilities[code]) continue;
+    var act=nfHoActive(c).filter(function(k){ return k!==code; }).every(function(k){ return (((_nfHo.sups[to]||{}).facilities)||{})[k]; });
+    if(act&&c.supervisorId!==to){ try{ await db.ref('sc_champions/'+m+'/supervisorId').set(to); }catch(e){} } }
+  try{ await scSecureSyncClaimsSafe(to); }catch(e){}
+  showToast((f.name||code)+' handed over to '+toN+(n?' · '+n+' session'+(n===1?'':'s')+' moved':'')+'.','ok');
+  await nfHoLoad(); nfHoRender(code); try{ await scLoadMasterData(); }catch(e){}
+}
+async function nfHoChampion(){
+  var code=(document.getElementById('nf-ho-fac')||{}).value, to=(document.getElementById('nf-ho-ch')||{}).value; if(!code||!to){ showToast('Choose the facility and the new Quality Champion.','err'); return; }
+  var from=nfHoChampsOf(code), f=_nfHo.facs[code]||{}, toC=_nfHo.champs[to]||{}, toN=toC.name||to, fromN=from.map(function(m){ return (_nfHo.champs[m]||{}).name||m; }).join(', ');
+  var load=nfHoActive(toC).length;
+  var v=await scDialog({title:'Hand over Quality Champion',icon:'🔁',okLabel:'Hand over',message:(f.name||code)+'\n'+(fromN||'No Champion')+'  →  '+toN+(load>=2?'\n\n⚠ '+toN+' already has '+load+' active Sub-Centres (the usual limit is 2).':'')+'\n\nThe new Champion gets access now and continues the baseline review where it stopped. Planned sessions move to them (they can change the time). Summaries already submitted stay with the previous Champion.',
+    fields:[{key:'note',label:'Reason (optional)',placeholder:'e.g. not available this month'}]}); if(!v) return;
+  var upd={}, now=scNowIso(); from.forEach(function(m){ upd['sc_champions/'+m+'/facilities/'+code]=null; });
+  upd['sc_champions/'+to+'/facilities/'+code]=true;
+  upd['sc_facilities/'+code+'/handovers/'+scUid('ho')]=scClean({kind:'champ',from:from.join(','),fromName:fromN,to:to,toName:toN,at:now,by:'HealSol Admin',note:(v.note||'').trim()});
+  try{ await db.ref().update(upd); }catch(e){ showToast('Could not hand over — check connection.','err'); return; }
+  var n=await nfHoSessions(code,function(s){ return (s.status!=='submitted'&&from.indexOf(s.championId)>=0)?{championId:to,championName:toN}:null; });
+  showToast((f.name||code)+' handed over to '+toN+(n?' · '+n+' planned session'+(n===1?'':'s')+' moved':'')+'.','ok');
+  await nfHoLoad(); nfHoRender(code);
+}
+function scSecureSyncClaimsSafe(){ return Promise.resolve(); }   // roles are read from the database, no claim refresh needed
+(function(){ if(typeof nfAdminApply==='function'){ var o=nfAdminApply; nfAdminApply=function(){ try{ nfEnsureHandover(); }catch(e){} return o.apply(this,arguments); }; } })();
 </script>
 
 </body>
