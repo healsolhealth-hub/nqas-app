@@ -17589,6 +17589,11 @@ function nfLmPaint(){
 .nfbl-tip{font-size:12px;color:var(--t2);background:var(--bg);border-radius:12px;padding:8px 10px;margin:6px 0 10px;line-height:1.45;}
 .nfbl-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;} .nfbl-stats span{font-size:11.5px;font-weight:600;border-radius:20px;padding:4px 10px;background:#F1F5F9;color:var(--t2);}
 .nfbl-stats span.r{background:#FEE2E2;color:#B91C1C;} .nfbl-stats span.g{background:#DCFCE7;color:#15803D;}
+.nfbl-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 6px;} .nfbl-tabs::-webkit-scrollbar{display:none;}
+.nfbl-tabs button{flex:0 0 auto;border:1.5px solid var(--br);background:#fff;border-radius:20px;padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;color:var(--t2);cursor:pointer;}
+.nfbl-tabs button b{margin-left:3px;} .nfbl-tabs button.g b{color:#15803D;} .nfbl-tabs button.r b{color:#B91C1C;}
+.nfbl-tabs button.on{background:var(--teal);border-color:var(--teal);color:#fff;} .nfbl-tabs button.on b{color:#fff;}
+.nfbl-sub{font-size:11.5px;color:var(--t3);margin:2px 2px 8px;}
 .nfbl-sec{font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin:12px 2px 6px;}
 .nfbl-it{border:1px solid var(--br);border-radius:14px;padding:10px 12px;margin-bottom:8px;background:#fff;}
 .nfbl-it.done{border-color:#BBF7D0;background:#FBFFFC;} .nfbl-it.chg{border-color:#FCA5A5;background:#FFFBFB;}
@@ -17664,18 +17669,19 @@ function nfBlItems(ctx,di){
   return out;
 }
 function nfBlMet(x){ return x.k==='s'?x.v===2:x.v===1; }
+function nfBlSelfMet(x){ return x.k==='s'?x.self===2:x.self===1; }
 // red flags per staff card on this day
 function nfBlFlags(ctx,di,items){
   var by={}, fl={}; items.forEach(function(x){ (by[x.mob]=by[x.mob]||[]).push(x); });
   Object.keys(by).forEach(function(m){ var L=by[m];
-    if(L.length>=10&&L.every(nfBlMet)) (fl[m]=fl[m]||[]).push('All items Met');
-    var ch=0; for(var d=0;d<SC_BASELINE_DAYS;d++){ var r=nfBlRec(ctx,m,d), rv=(r&&r.blRev)||{}; Object.keys(rv).forEach(function(c){ Object.keys(rv[c]||{}).forEach(function(k){ var e=rv[c][k]; if(e&&e.r&&e.r!=='ok'&&e.r!=='inplace') ch++; }); }); }
+    if(L.length>=10&&L.every(nfBlSelfMet)) (fl[m]=fl[m]||[]).push('All items Met');
+    var ch=0; for(var d=0;d<SC_BASELINE_DAYS;d++){ if(d===di) continue; var r=nfBlRec(ctx,m,d), rv=(r&&r.blRev)||{}; Object.keys(rv).forEach(function(c){ Object.keys(rv[c]||{}).forEach(function(k){ var e=rv[c][k]; if(e&&e.r&&e.r!=='ok'&&e.r!=='inplace') ch++; }); }); }
     if(ch>=3) (fl[m]=fl[m]||[]).push('Often corrected');
   });
   var ms=Object.keys(by);
   for(var i=0;i<ms.length;i++) for(var j=i+1;j<ms.length;j++){
-    var A={}, same=0, shared=0; by[ms[i]].forEach(function(x){ A[x.ci+'|'+x.k]=x.v; });
-    by[ms[j]].forEach(function(x){ var key=x.ci+'|'+x.k; if(key in A){ shared++; if(A[key]===x.v) same++; } });
+    var A={}, same=0, shared=0; by[ms[i]].forEach(function(x){ A[x.ci+'|'+x.k]=x.self; });
+    by[ms[j]].forEach(function(x){ var key=x.ci+'|'+x.k; if(key in A){ shared++; if(A[key]===x.self) same++; } });
     if(shared>=5&&same===shared){ [ms[i],ms[j]].forEach(function(m){ (fl[m]=fl[m]||[]).push('Same scores as another staff member'); }); }
   }
   Object.keys(fl).forEach(function(m){ fl[m]=fl[m].filter(function(v,i,a){ return a.indexOf(v)===i; }); });
@@ -17683,7 +17689,7 @@ function nfBlFlags(ctx,di,items){
 }
 // the items to check: red-flag cards' Met items, then higher-pass-mark Standards, then a random sample — picked when the review opens
 function nfBlPick(items,flags,seed){
-  var cand=items.filter(function(x){ return nfBlMet(x)&&!x.rev; }), rnd=scRand(scHashSeed(seed));
+  var cand=items.filter(nfBlSelfMet), rnd=scRand(scHashSeed(seed));
   cand.forEach(function(x){ x._p=(flags[x.mob]?0:nfBlStdHigh(x.cp)?1:2); x._r=rnd(); });
   cand.sort(function(a,b){ return (a._p-b._p)||(a._r-b._r); });
   return cand.slice(0,NF_BL.pick);
@@ -17745,8 +17751,8 @@ async function nfBlOpen(code,di,via,sid){
   if(!nfBlIsDay(di)){ showToast('Baseline review covers Days 1–7 only.','err'); return; }
   var ctx=await nfBlLoad(code); if(!ctx){ showToast('Facility not found.','err'); return; }
   var items=nfBlItems(ctx,di); if(!items.length){ showToast('No staff card for Day '+(di+1)+' is marked done yet.','err'); return; }
-  var flags=nfBlFlags(ctx,di,items), seed=code+'|'+di+'|'+(sid||('visit|'+scTodayStr()))+'|'+nfBlActor().id;
-  _nfBl={ctx:ctx,di:di,via:via==='session'?'session':'visit',sid:sid||null,flags:flags,why:null,pick:nfBlPick(items,flags,seed).map(function(x){ return {mob:x.mob,ci:x.ci,k:x.k}; })};
+  var flags=nfBlFlags(ctx,di,items), seed=code+'|'+di+'|'+(ctx.fac.startDate||'');   // same 20 for the Champion and the Supervisor
+  _nfBl={ctx:ctx,di:di,via:via==='session'?'session':'visit',sid:sid||null,flags:flags,why:null,tab:'pick',pick:nfBlPick(items,flags,seed).map(function(x){ return {mob:x.mob,ci:x.ci,k:x.k}; })};
   nfBlRender();
 }
 function nfBlClose(){ var o=document.getElementById('nfbl-ov'), W=_nfBl; if(o) o.remove(); _nfBl=null; if(W&&appMode!=='sc-champion') nfBlRefreshIns(W.ctx.code).catch(function(){}); }
@@ -17767,6 +17773,19 @@ function nfBlItemHTML(x,fl){
   if(x.rev) h+='<div class="nfbl-done'+(chg?' c':'')+'">'+(chg?'Changed':'Checked')+' by '+scEsc(x.rev.by||'')+' · '+scEsc(NF_BL_WHY[x.rev.r]||x.rev.r||'')+' · '+scEsc(x.rev.via==='visit'?'field visit':'live session')+'</div>';
   return h+'</div>';
 }
+function nfBlTabsHTML(W,n){
+  var tb=[['pick','To check',n.pickLeft+' of '+n.pick],['checked','Checked',n.checked],['changed','Changed',n.changed],['all','All items',n.all]];
+  return '<div class="nfbl-tabs">'+tb.map(function(t){ return '<button type="button" class="'+(W.tab===t[0]?'on ':'')+(t[0]==='changed'&&n.changed?'r':t[0]==='checked'&&n.checked?'g':'')+'" onclick="_nfBl.tab=\''+t[0]+'\';nfBlRender()">'+t[1]+' <b>'+t[2]+'</b></button>'; }).join('')+'</div>'
+    +'<div class="nfbl-sub">'+n.all+' items scored by staff on this day · '+n.met+' Met</div>';
+}
+function nfBlListHTML(W,items,pick,pk,byStaff){
+  var row=function(x){ return nfBlItemHTML(x,pk[x.mob+'|'+x.ci+'|'+x.k]?W.flags[x.mob]:null); }, empty=function(t){ return '<div class="nfbl-tip">'+t+'</div>'; };
+  if(W.tab==='checked'){ var L=items.filter(function(x){ return x.rev; }); return L.length?L.map(row).join(''):empty('Nothing checked yet.'); }
+  if(W.tab==='changed'){ var C=items.filter(function(x){ return x.rev&&x.rev.r!=='ok'; }); return C.length?C.map(row).join(''):empty('No item has been changed.'); }
+  if(W.tab==='all'){ var by={}; items.forEach(function(x){ (by[x.mob]=by[x.mob]||[]).push(x); });
+    return '<div class="nfbl-sub">Correct anything you see on site — not only the suggested items.</div>'+Object.keys(by).map(function(m){ var L=by[m]; return '<div class="nfbl-sec">'+scEsc(L[0].name)+' · '+scEsc(L[0].role)+' ('+L.length+')</div>'+L.map(row).join(''); }).join(''); }
+  return pick.length?'<div class="nfbl-sub">The same '+pick.length+' items for the Champion and the Supervisor — checked ones stay here, marked.</div>'+pick.map(row).join(''):empty('No Met items to sample on this day.');
+}
 function nfBlRender(){
   var W=_nfBl; if(!W) return;
   var old=document.getElementById('nfbl-ov'), sc=old?old.querySelector('.scx-box').scrollTop:0; if(old) old.remove();
@@ -17782,12 +17801,9 @@ function nfBlRender(){
     +'<span class="nfbl-via'+(W.via==='visit'?' visit':'')+'">'+(W.via==='visit'?'🚶 Field visit':'🎥 Live session')+'</span></div>'
     +(appr?'<div class="nfbl-badge g">✓ Approved — you can still correct items until Day '+NF_BL.autoDay+'</div>':'')
     +'<div class="nfbl-tip">Ask the staff member to <b>show</b> each item'+(W.via==='visit'?'':' on camera')+'. Tap <b>✓ Correct</b> if you saw it, or <b>✗ Not met</b> with a reason. Items you don\'t touch keep the staff score. Your change becomes the facility\'s baseline.</div>'
-    +'<div class="nfbl-stats"><span>'+items.length+' items scored</span><span>'+metN+' Met</span><span class="g">'+checked+' checked</span><span class="r">'+changed+' changed</span></div>'
-    +(flagged.length?'<div class="nfbl-tip" style="background:#FFFBEB;color:#92400E;">⚑ Red flags — '+flagged.join(' · ')+'</div>':'')
-    +'<div class="nfbl-sec">To check now ('+pick.length+')</div>'
-    +(pick.length?pick.map(function(x){ return nfBlItemHTML(x,W.flags[x.mob]); }).join(''):'<div class="nfbl-tip">No Met items left to sample.</div>')
-    +'<details class="nfbl-all"><summary>All other items on Day '+(W.di+1)+' — correct anything you see on site</summary>'
-    +Object.keys(byStaff).map(function(m){ var L=byStaff[m]; return '<div class="nfbl-sec">'+scEsc(L[0].name)+' · '+scEsc(L[0].role)+' ('+L.length+')</div>'+L.map(function(x){ return nfBlItemHTML(x,null); }).join(''); }).join('')+'</details>'
+    +nfBlTabsHTML(W,{pick:pick.length,pickLeft:pick.filter(function(x){ return !x.rev; }).length,checked:checked,changed:changed,all:items.length,met:metN})
+    +(flagged.length&&W.tab==='pick'?'<div class="nfbl-tip" style="background:#FFFBEB;color:#92400E;">⚑ Red flags — '+flagged.join(' · ')+'</div>':'')
+    +nfBlListHTML(W,items,pick,pk,byStaff)
     +'<div class="nfbl-foot"><button class="scx-btn" onclick="nfBlApprove()"><i class="ti ti-circle-check"></i> '+(appr?'Approve again':'Approve Day '+(W.di+1))+'</button><button class="scx-btn ghost" onclick="nfBlClose()">Close</button></div></div>';
   document.body.appendChild(ov); try{ ov.querySelector('.scx-box').scrollTop=sc; }catch(e){}
 }
