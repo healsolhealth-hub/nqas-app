@@ -17670,6 +17670,7 @@ function nfBlItems(ctx,di){
 }
 function nfBlMet(x){ return x.k==='s'?x.v===2:x.v===1; }
 function nfBlSelfMet(x){ return x.k==='s'?x.self===2:x.self===1; }
+function nfBlChanged(x){ return x.v!==x.self; }
 // red flags per staff card on this day
 function nfBlFlags(ctx,di,items){
   var by={}, fl={}; items.forEach(function(x){ (by[x.mob]=by[x.mob]||[]).push(x); });
@@ -17712,6 +17713,10 @@ async function nfBlSet(mob,di,ci,k,v,r){
   var path=scProgressPath(W.ctx.code,mob,di), rec=await fbGet(path); if(!rec||!rec.taskDone){ showToast('This card is not marked done.','err'); return; }
   var d=scDayDef(W.ctx.progId,di), cp=d.cps[ci], n=(cp.items||[]).length, a=nfBlActor(), now=scNowIso(), upd={};
   var entry=scClean({v:v,r:r,by:a.name,byId:a.id,role:a.role,at:now,via:W.via,sid:W.sid||null});
+  var prev=(((rec.blRev||{})['c'+ci])||{})[k]||null;
+  if(r==='ok'&&prev&&prev.r&&prev.r!=='ok'&&prev.v===v){   // agreeing with an earlier change: keep who changed it and why
+    entry=scClean(Object.assign({},prev,{conf:{by:a.name,byId:a.id,role:a.role,at:now,via:W.via}}));
+  }
   if(r!=='ok'){
     if(!(rec.blSelf&&rec.blSelf['c'+ci])) upd['blSelf/c'+ci]={t:((rec.cpTicks||{})['c'+ci])||'',s:scNormScore((rec.cpScores||[])[ci])==null?-1:scNormScore((rec.cpScores||[])[ci])};
     var sc;
@@ -17729,12 +17734,12 @@ async function nfBlSet(mob,di,ci,k,v,r){
 async function nfBlApprove(){
   var W=_nfBl; if(!W) return;
   var items=nfBlItems(W.ctx,W.di), mobs={}; items.forEach(function(x){ mobs[x.mob]=1; });
-  var checked=items.filter(function(x){ return x.rev; }).length, changed=items.filter(function(x){ return x.rev&&x.rev.r!=='ok'; }).length;
+  var checked=items.filter(function(x){ return x.rev; }).length, changed=items.filter(nfBlChanged).length;
   var left=W.pick.filter(function(x){ var y=items.find(function(z){ return z.mob===x.mob&&z.ci===x.ci&&z.k===x.k; }); return y&&!y.rev; }).length;
   if(!await showConfirm('Approve the baseline for Day '+(W.di+1)+'?\n\n'+checked+' item'+(checked===1?'':'s')+' checked · '+changed+' changed'+(left?' · '+left+' suggested item'+(left===1?'':'s')+' not checked':'')+'.\nEverything you did not change is accepted as scored by staff.','✅','Approve Day '+(W.di+1),'Approve','var(--teal)')) return;
   var a=nfBlActor(), now=scNowIso(), done=0;
   for(var m in mobs){ var path=scProgressPath(W.ctx.code,m,W.di), rec=await fbGet(path); if(!rec||!rec.taskDone) continue;
-    var mine=items.filter(function(x){ return x.mob===m; }), upd={blApproved:scClean({by:a.name,byId:a.id,role:a.role,at:now,via:W.via,sid:W.sid||null,checked:mine.filter(function(x){ return x.rev; }).length,changed:mine.filter(function(x){ return x.rev&&x.rev.r!=='ok'; }).length})};
+    var mine=items.filter(function(x){ return x.mob===m; }), upd={blApproved:scClean({by:a.name,byId:a.id,role:a.role,at:now,via:W.via,sid:W.sid||null,checked:mine.filter(function(x){ return x.rev; }).length,changed:mine.filter(nfBlChanged).length})};
     if(!rec.verified) Object.assign(upd,{verified:true,verifiedBy:a.name,verifiedByRole:a.role,verifiedByMob:appMode==='sc-champion'?a.id:'',verifiedAt:now,verifyMode:'baseline-review',sampleChecked:upd.blApproved.checked,sampleAccepted:Math.max(0,mine.length-upd.blApproved.checked)});
     try{ await db.ref(path).update(upd); done++; }catch(e){ showToast('Could not approve — check connection.','err'); return; } }
   if(W.sid&&appMode==='sc-champion'){ try{ var s=await fbGet('sc_review_sessions/'+W.sid);
@@ -17757,7 +17762,7 @@ async function nfBlOpen(code,di,via,sid){
 }
 function nfBlClose(){ var o=document.getElementById('nfbl-ov'), W=_nfBl; if(o) o.remove(); _nfBl=null; if(W&&appMode!=='sc-champion') nfBlRefreshIns(W.ctx.code).catch(function(){}); }
 function nfBlItemHTML(x,fl){
-  var key=x.mob+'|'+x.ci+'|'+x.k, met=nfBlMet(x), chg=x.rev&&x.rev.r!=='ok', J="'"+scJs(x.mob)+"',"+_nfBl.di+','+x.ci+",'"+x.k+"'";
+  var key=x.mob+'|'+x.ci+'|'+x.k, met=nfBlMet(x), chg=nfBlChanged(x), J="'"+scJs(x.mob)+"',"+_nfBl.di+','+x.ci+",'"+x.k+"'";
   var on=x.k==='s'?2:1, off=x.k==='s'?0:0, why=_nfBl.why===key;
   var h='<div class="nfbl-it'+(x.rev?(chg?' chg':' done'):'')+'"><div class="nfbl-meta"><b style="color:var(--t1)">'+scEsc(x.name)+'</b><span>'+scEsc(x.role)+'</span><span>· '+scEsc(x.cp.id)+' · '+scEsc(x.cp.me||'')+'</span>'
     +((fl||[]).map(function(f){ return '<span class="fl">⚑ '+scEsc(f)+'</span>'; }).join(''))+'</div>'
@@ -17767,10 +17772,12 @@ function nfBlItemHTML(x,fl){
     +'<div class="nfbl-row"><span class="nfbl-st '+(met?'m':'n')+'">'+(met?'Met':'Not met')+'</span>'
     +(x.self!==x.v?'<span class="nfbl-st" style="background:#F1F5F9;color:#475569;">staff said '+((x.k==='s'?x.self===2:x.self===1)?'Met':'Not met')+'</span>':'');
   if(met) h+='<button class="nfbl-b ok" onclick="nfBlSet('+J+','+on+',\'ok\')">✓ Correct</button><button class="nfbl-b no'+(why?' on':'')+'" onclick="_nfBl.why=_nfBl.why===\''+key+'\'?null:\''+key+'\';nfBlRender()">✗ Not met</button>';
-  else h+='<button class="nfbl-b ok" onclick="nfBlSet('+J+','+on+',\'inplace\')">✓ Actually in place</button><button class="nfbl-b" onclick="nfBlSet('+J+','+off+',\'ok\')">Correct as Not met</button>';
+  else h+='<button class="nfbl-b ok" onclick="nfBlSet('+J+','+on+',\'inplace\')">'+(chg?'↩ Back to Met':'✓ Actually in place')+'</button><button class="nfbl-b" onclick="nfBlSet('+J+','+off+',\'ok\')">'+(chg?'✓ Agree — Not met':'Correct as Not met')+'</button>';
   h+='</div>';
   if(why) h+='<div class="nfbl-why">'+['notseen','incomplete','explain','notfunc'].map(function(r){ return '<button onclick="nfBlSet('+J+','+off+',\''+r+'\')">'+scEsc(NF_BL_WHY[r])+'</button>'; }).join('')+'</div>';
-  if(x.rev) h+='<div class="nfbl-done'+(chg?' c':'')+'">'+(chg?'Changed':'Checked')+' by '+scEsc(x.rev.by||'')+' · '+scEsc(NF_BL_WHY[x.rev.r]||x.rev.r||'')+' · '+scEsc(x.rev.via==='visit'?'field visit':'live session')+'</div>';
+  if(x.rev){ var rv=x.rev, who=function(e){ return scEsc(e.by||'')+(e.role?' ('+scEsc(e.role)+')':''); }, via=function(e){ return e.via==='visit'?'field visit':'live session'; };
+    h+='<div class="nfbl-done'+(chg?' c':'')+'">'+(chg?'Changed by '+who(rv)+' · '+scEsc(NF_BL_WHY[rv.r]||rv.r||'')+' · '+via(rv):'Checked by '+who(rv)+' · '+scEsc(rv.r==='ok'?'correct as scored':(NF_BL_WHY[rv.r]||rv.r||''))+' · '+via(rv))
+      +(rv.conf?'<br>✓ Confirmed by '+who(rv.conf)+' · '+via(rv.conf):'')+'</div>'; }
   return h+'</div>';
 }
 function nfBlTabsHTML(W,n){
@@ -17781,7 +17788,7 @@ function nfBlTabsHTML(W,n){
 function nfBlListHTML(W,items,pick,pk,byStaff){
   var row=function(x){ return nfBlItemHTML(x,pk[x.mob+'|'+x.ci+'|'+x.k]?W.flags[x.mob]:null); }, empty=function(t){ return '<div class="nfbl-tip">'+t+'</div>'; };
   if(W.tab==='checked'){ var L=items.filter(function(x){ return x.rev; }); return L.length?L.map(row).join(''):empty('Nothing checked yet.'); }
-  if(W.tab==='changed'){ var C=items.filter(function(x){ return x.rev&&x.rev.r!=='ok'; }); return C.length?C.map(row).join(''):empty('No item has been changed.'); }
+  if(W.tab==='changed'){ var C=items.filter(nfBlChanged); return C.length?C.map(row).join(''):empty('No item has been changed.'); }
   if(W.tab==='all'){ var by={}; items.forEach(function(x){ (by[x.mob]=by[x.mob]||[]).push(x); });
     return '<div class="nfbl-sub">Correct anything you see on site — not only the suggested items.</div>'+Object.keys(by).map(function(m){ var L=by[m]; return '<div class="nfbl-sec">'+scEsc(L[0].name)+' · '+scEsc(L[0].role)+' ('+L.length+')</div>'+L.map(row).join(''); }).join(''); }
   return pick.length?'<div class="nfbl-sub">The same '+pick.length+' items for the Champion and the Supervisor — checked ones stay here, marked.</div>'+pick.map(row).join(''):empty('No Met items to sample on this day.');
@@ -17791,7 +17798,7 @@ function nfBlRender(){
   var old=document.getElementById('nfbl-ov'), sc=old?old.querySelector('.scx-box').scrollTop:0; if(old) old.remove();
   var items=nfBlItems(W.ctx,W.di), find=function(p){ return items.find(function(x){ return x.mob===p.mob&&x.ci===p.ci&&x.k===p.k; }); };
   var pick=W.pick.map(find).filter(Boolean), pk={}; pick.forEach(function(x){ pk[x.mob+'|'+x.ci+'|'+x.k]=1; });
-  var checked=items.filter(function(x){ return x.rev; }).length, changed=items.filter(function(x){ return x.rev&&x.rev.r!=='ok'; }).length, metN=items.filter(nfBlMet).length;
+  var checked=items.filter(function(x){ return x.rev; }).length, changed=items.filter(nfBlChanged).length, metN=items.filter(nfBlMet).length;
   var f=W.ctx.fac, appr=items.some(function(x){ return x.rec&&x.rec.blApproved; });
   var flagged=Object.keys(W.flags).map(function(m){ return scEsc(((W.ctx.roster[m]||{}).name)||m)+': '+W.flags[m].map(scEsc).join(', '); });
   var byStaff={}; items.forEach(function(x){ if(pk[x.mob+'|'+x.ci+'|'+x.k]) return; (byStaff[x.mob]=byStaff[x.mob]||[]).push(x); });
@@ -17896,7 +17903,7 @@ async function nfBlPlanSessions(code){
     try{ var c=(choState.cards||{})[di]; if(!c||!c.blRev||!nfBlIsDay(+di)) return r; var d=getDay(di);
       Object.keys(c.blRev).forEach(function(k){ var ci=+k.slice(1), el=document.getElementById('cp-'+di+'-'+ci), cp=d&&d.cps&&d.cps[ci]; if(!el||!cp) return;
         var rv=c.blRev[k]||{}, notes=Object.keys(rv).map(function(kk){ var e=rv[kk]||{}; var lab=kk==='s'?'':((cp.items||[])[+kk]?'MoV '+(+kk+1)+': ':'');
-          var chg=e.r&&e.r!=='ok'; return '<div class="nfbl-note'+(chg?'':' ok')+'">'+(chg?'🔎 ':'✓ ')+scEsc(lab)+(chg?(e.v===1||e.v===2?t('Changed to Met'):t('Changed to Not met'))+' — '+scEsc(nfBlWhy(e.r)):t('Checked — correct'))+' · '+scEsc(e.by||'')+(e.role?' ('+scEsc(e.role)+')':'')+'</div>'; });
+          var sf=((c.blSelf||{})[k]||{}), own=kk==='s'?scNormScore(sf.s):(sf.t!=null?scTicksFromStr(sf.t)[+kk]:e.v), chg=(sf.t!=null||sf.s!=null)?own!==e.v:(e.r&&e.r!=='ok'); return '<div class="nfbl-note'+(chg?'':' ok')+'">'+(chg?'🔎 ':'✓ ')+scEsc(lab)+(chg?(e.v===1||e.v===2?t('Changed to Met'):t('Changed to Not met'))+' — '+scEsc(nfBlWhy(e.r)):t('Checked — correct'))+' · '+scEsc(e.by||'')+(e.role?' ('+scEsc(e.role)+')':'')+'</div>'; });
         if(notes.length) el.insertAdjacentHTML('beforeend','<div class="nfbl-notes">'+notes.join('')+'</div>'); });
     }catch(e){ console.warn('[SC] baseline notes',e); }
     return r; };
