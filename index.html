@@ -17411,9 +17411,8 @@ function nfPwText(st,p){
   var lines=['Namaste'+(first?' '+first:'')+' ji,','The NQAS | FAST Action Plan for '+nm+' is ready. You have '+L.length+' action'+(L.length===1?'':'s')+(p.od?' ('+p.od+' overdue)':'')+':',''];
   L.slice(0,N).forEach(function(a,i){ lines.push((i+1)+'. '+(a.action||'')+(a.cpId?' ['+a.cpId+']':'')+(a._with?' (together with '+a._with+')':'')+(a.dueDate?' — due '+scFmtDate(a.dueDate):'')+(a._s==='overdue'?' (overdue)':'')); });
   if(L.length>N) lines.push('…and '+(L.length-N)+' more in the app.');
-  lines.push('','Open NQAS | FAST → Today → 📌 My actions. When an action is done, tap "Done — ready for re-check".',
-    'आपके कार्य ऐप में Today → 📌 मेरे कार्य में हैं। काम पूरा होने पर "Done — ready for re-check" दबाएँ।');
-  if(typeof NF_APP_HOME!=='undefined') lines.push(NF_APP_HOME);
+  lines.push('','Open NQAS | FAST → Today → My actions. When an action is done, tap "Done — ready for re-check".',
+    'आपके कार्य ऐप में Today → मेरे कार्य में हैं। काम पूरा होने पर "Done — ready for re-check" दबाएँ।');
   lines.push('— '+(me.name||'')+(me.role?' ('+me.role+')':''));
   return lines.join('\n');
 }
@@ -18114,9 +18113,8 @@ var _nfPwLang='hi';
     var lines=['नमस्ते'+(first?' '+first:'')+' जी,',nm+' की NQAS | FAST कार्य योजना तैयार है। आपके '+L.length+' कार्य हैं'+(p.od?' ('+p.od+' समय से पीछे)':'')+':',''];
     L.slice(0,N).forEach(function(a,i){ lines.push((i+1)+'. '+nfActText(a,'hi')+(a.cpId?' ['+a.cpId+']':'')+(a._with?' ('+(a._withHi||a._with)+' के साथ)':'')+(a.dueDate?' — '+scFmtDate(a.dueDate)+' तक':'')+(a._s==='overdue'?' (समय निकल गया)':'')); });
     if(L.length>N) lines.push('…और '+(L.length-N)+' कार्य ऐप में।');
-    lines.push('','NQAS | FAST खोलें → Today → 📌 मेरे कार्य। काम पूरा होने पर "Done — ready for re-check" दबाएँ।');
-    if(typeof NF_APP_HOME!=='undefined') lines.push(NF_APP_HOME);
-    lines.push('— '+(me.name||'')+(me.role?' ('+me.role+')':''));
+    lines.push('','NQAS | FAST खोलें → Today → मेरे कार्य। काम पूरा होने पर "Done — ready for re-check" दबाएँ।');
+      lines.push('— '+(me.name||'')+(me.role?' ('+me.role+')':''));
     return lines.join('\n');
   };
   if(typeof nfPlanNotify==='function'){ var oN=nfPlanNotify;
