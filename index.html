@@ -11557,14 +11557,27 @@ function scAeGenNote(p,html){
   if(!note){ note=document.createElement('div'); note.className='scd-ae'; p.insertBefore(note,p.firstChild); }
   note.innerHTML=html; p.style.display='';
 }
+// Baseline order (8 Oct 2026): structure → process → outcome; AoC A + E together by service package
+function scDayGroup(c){
+  var a=c.aoc, n=+String(c.std||'').slice(1)||0, s=c.svc||c.service||'';
+  if(a==='C'||a==='B') return 0;
+  if(a==='D'||(a==='A'&&String(c.std)==='A2')) return 1;
+  if(a==='F'||a==='G'||(a==='E'&&n<=6)) return 2;
+  if(a==='H'||(a==='A'&&/A1\.14$/.test(c.me||''))||s==='Elderly & Palliative Care') return 6;
+  if(['Pregnancy & Child Birth','Neonatal & Infant Care','Childhood & Adolescent Health'].indexOf(s)>=0) return 3;
+  if(['Family Planning','Management of Communicable Diseases','Care of Common Ophthalmic and ENT'].indexOf(s)>=0) return 4;
+  if(['Management of Non-Communicable Diseases','Oral Health Care','Mental Health','Emergency'].indexOf(s)>=0) return 5;
+  if(a==='E'){ if(n>=13) return 3; if(n===10||n===8) return 4; return 5; }   // E with no service tag: by standard
+  return a==='A'?5:6;
+}
 var SC_BASELINE=[
-  {key:'A',title:'AoC A · Service Provision',hi:'AoC A · सेवा प्रावधान',match:function(c){ return c.aoc==='A'; }},
-  {key:'B+D',title:'AoC B · Patient Rights and AoC D · Support Services',hi:'AoC B · मरीज़ अधिकार और AoC D · सहायक सेवाएँ',match:function(c){ return c.aoc==='B'||c.aoc==='D'; }},
-  {key:'C',title:'AoC C · Inputs',hi:'AoC C · इनपुट',match:function(c){ return c.aoc==='C'; }},
-  {key:'E',title:'AoC E · RMNCH+A services (E13–E18)',hi:'AoC E · RMNCH+A सेवाएँ (E13–E18)',match:function(c){ var n=+c.std.slice(1); return c.aoc==='E'&&n>=13; }},
-  {key:'E',title:'AoC E · Disease programmes, NCD and other services (E7–E12)',hi:'AoC E · रोग कार्यक्रम, NCD और अन्य सेवाएँ (E7–E12)',match:function(c){ var n=+c.std.slice(1); return c.aoc==='E'&&n>=7&&n<=12; }},
-  {key:'E+F',title:'AoC E · General clinical processes (E1–E6) and AoC F · Infection Control',hi:'AoC E · सामान्य चिकित्सा प्रक्रियाएँ (E1–E6) और AoC F · संक्रमण नियंत्रण',match:function(c){ var n=+c.std.slice(1); return (c.aoc==='E'&&n<=6)||c.aoc==='F'; }},
-  {key:'G+H',title:'AoC G · Quality Management and AoC H · Outcome',hi:'AoC G · गुणवत्ता प्रबंधन और AoC H · परिणाम',match:function(c){ return c.aoc==='G'||c.aoc==='H'; }}
+  {key:'C+B',title:'AoC C · Inputs and AoC B · Patient Rights',hi:'AoC C · इनपुट और AoC B · मरीज़ अधिकार',match:function(c){ return scDayGroup(c)===0; }},
+  {key:'D+A2',title:'AoC D · Support Services and A2 · Drugs & Diagnostics',hi:'AoC D · सहायक सेवाएँ और A2 · दवाएँ व जाँच',match:function(c){ return scDayGroup(c)===1; }},
+  {key:'F+G+E',title:'AoC F · Infection Control, AoC G · Quality Management and E1–E6 · General clinical processes',hi:'AoC F · संक्रमण नियंत्रण, AoC G · गुणवत्ता प्रबंधन और E1–E6 · सामान्य चिकित्सा प्रक्रियाएँ',match:function(c){ return scDayGroup(c)===2; }},
+  {key:'A+E',title:'Pregnancy & Child Birth, Neonatal & Infant Care, Childhood & Adolescent Health (AoC A + E)',hi:'गर्भावस्था व प्रसव, नवजात व शिशु देखभाल, बाल व किशोर स्वास्थ्य (AoC A + E)',match:function(c){ return scDayGroup(c)===3; }},
+  {key:'A+E',title:'Family Planning, Communicable Diseases, Eye & ENT care (AoC A + E)',hi:'परिवार नियोजन, संचारी रोग, आँख व ENT देखभाल (AoC A + E)',match:function(c){ return scDayGroup(c)===4; }},
+  {key:'A+E',title:'Non-Communicable Diseases, Oral Health, Mental Health and Emergency (AoC A + E)',hi:'गैर-संचारी रोग, मुख स्वास्थ्य, मानसिक स्वास्थ्य और आपातकाल (AoC A + E)',match:function(c){ return scDayGroup(c)===5; }},
+  {key:'A+E+H',title:'Elderly & Palliative Care, Health Promotion (A1.14) and AoC H · Outcome',hi:'बुज़ुर्ग व पैलिएटिव देखभाल, स्वास्थ्य संवर्धन (A1.14) और AoC H · परिणाम',match:function(c){ return scDayGroup(c)===6; }}
 ];
 Object.assign(HINDI_UI,{'Baseline audit':'बेसलाइन ऑडिट','Baseline audit (rapid)':'बेसलाइन ऑडिट (त्वरित)','All met':'सभी पूरे','Baseline report':'बेसलाइन रिपोर्ट',
   'answered today':'आज उत्तर दिए','Answer each item Met or Not met. Gaps found this week become your action plan from Day 8.':'हर बात पर "पूरा" या "पूरा नहीं" चुनें। इस सप्ताह मिली कमियाँ दिन 8 से आपकी कार्य योजना बनेंगी।'});
@@ -12406,13 +12419,13 @@ function scRvRenderAttention(){
 //  • Days 50–56 re-score everything in the baseline groupings (revision / end-line).
 // ══════════════════════════════════════════════════════════════
 var SC_MCH_SVC=['Pregnancy & Child Birth','Neonatal & Infant Care','Childhood & Adolescent Health','Family Planning'];
-var SC_IMPL_WEEKS=[
-  {key:'C+D',start:8,title:'AoC C · Inputs and AoC D · Support Services',hi:'AoC C · इनपुट और AoC D · सहायक सेवाएँ',match:function(c){ return c.aoc==='C'||c.aoc==='D'; }},
-  {key:'B+F',start:15,title:'AoC B · Patient Rights and AoC F · Infection Control',hi:'AoC B · मरीज़ अधिकार और AoC F · संक्रमण नियंत्रण',match:function(c){ return c.aoc==='B'||c.aoc==='F'; }},
-  {key:'A+E',start:22,title:'RMNCH+A services (AoC A and E13–E18)',hi:'RMNCH+A सेवाएँ (AoC A और E13–E18)',match:function(c){ var n=+c.std.slice(1); return (c.aoc==='A'&&SC_MCH_SVC.indexOf(c.svc)>=0)||(c.aoc==='E'&&n>=13); }},
-  {key:'A+E',start:29,title:'Disease programmes, NCD and other services (AoC A and E7–E12)',hi:'रोग कार्यक्रम, NCD और अन्य सेवाएँ (AoC A और E7–E12)',match:function(c){ var n=+c.std.slice(1); return (c.aoc==='A'&&SC_MCH_SVC.indexOf(c.svc)<0)||(c.aoc==='E'&&n>=7&&n<=12); }},
-  {key:'E+G',start:36,title:'General clinical processes (E1–E6) and AoC G · Quality Management',hi:'सामान्य चिकित्सा प्रक्रियाएँ (E1–E6) और AoC G · गुणवत्ता प्रबंधन',match:function(c){ var n=+c.std.slice(1); return (c.aoc==='E'&&n<=6)||c.aoc==='G'; }},
-  {key:'H',start:43,title:'AoC H · Outcome',hi:'AoC H · परिणाम',match:function(c){ return c.aoc==='H'; }}
+var SC_IMPL_WEEKS=[   // same grouping as the baseline days: each week works on what that baseline day found
+  {key:'C+B',start:8,title:'AoC C · Inputs and AoC B · Patient Rights',hi:'AoC C · इनपुट और AoC B · मरीज़ अधिकार',match:function(c){ return scDayGroup(c)===0; }},
+  {key:'D+A2',start:15,title:'AoC D · Support Services and A2 · Drugs & Diagnostics',hi:'AoC D · सहायक सेवाएँ और A2 · दवाएँ व जाँच',match:function(c){ return scDayGroup(c)===1; }},
+  {key:'F+G+E',start:22,title:'Infection Control, Quality Management and general clinical processes (F, G, E1–E6)',hi:'संक्रमण नियंत्रण, गुणवत्ता प्रबंधन और सामान्य चिकित्सा प्रक्रियाएँ (F, G, E1–E6)',match:function(c){ return scDayGroup(c)===2; }},
+  {key:'A+E',start:29,title:'RMNCH+A: pregnancy, newborn, child and adolescent health (A + E)',hi:'RMNCH+A: गर्भावस्था, नवजात, बाल व किशोर स्वास्थ्य (A + E)',match:function(c){ return scDayGroup(c)===3; }},
+  {key:'A+E',start:36,title:'Family Planning, Communicable Diseases, Eye & ENT (A + E)',hi:'परिवार नियोजन, संचारी रोग, आँख व ENT (A + E)',match:function(c){ return scDayGroup(c)===4; }},
+  {key:'A+E+H',start:43,title:'NCD, Oral, Mental Health, Emergency, Elderly care and Outcomes (A + E + H)',hi:'NCD, मुख, मानसिक स्वास्थ्य, आपातकाल, बुज़ुर्ग देखभाल और परिणाम (A + E + H)',match:function(c){ var g=scDayGroup(c); return g===5||g===6; }}
 ];
 var SC_IMPL_FIRST=7, SC_IMPL_LAST=48, SC_REV_FIRST=49, SC_REV_LAST=55;   // day indexes (Day 8–49, Day 50–56)
 Object.assign(HINDI_UI,{'Implementation':'क्रियान्वयन','Revision (end-line)':'पुनरीक्षण (एंड-लाइन)','Week':'सप्ताह',
