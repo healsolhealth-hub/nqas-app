@@ -19271,6 +19271,7 @@ function nfgStateCls(s){ return s==='g'?'g':s==='a'?'a':s==='r'?'r':s==='complet
 function nfgDayLine(f){ var D=nfgDates(f), idx=nfgIdx(f), hi=nfgHi(); if(!D||idx==null) return hi?'प्रारंभ तिथि तय नहीं':'No start date'; if(idx<0) return (hi?'शुरू ':'Starts ')+nfgFmt(D.start);
   if(f.graduation) return (hi?'पूरा ':'Completed ')+nfgFmt(String(f.graduation.at||'').slice(0,10));
   if(idx<=D.lastIdx) return (hi?'दिन ':'Day ')+(idx+1)+' / '+NF_GRAD.days+' · '+(hi?'बंद ':'closes ')+nfgFmt(D.close);
+  if(idx>D.closeIdx) return (hi?'बंद ':'Closed ')+nfgFmt(D.close)+(hi?' · परिणाम खोलने पर':' · graduation runs when the facility is opened');
   return (hi?'छूट सप्ताह · बंद ':'Grace week · closes ')+nfgFmt(D.close); }
 function nfgCompHTML(st,c){
   c=c||nfgComp(st); var f=st.fac||{}, hi=nfgHi();
@@ -19290,6 +19291,7 @@ function nfgChipsHTML(f,c){
   var hi=nfgHi(), out=[], g=f.graduation, cu=nfgCatchup(f), n=f.nhsrc;
   if(c&&c.state!=='notstarted'&&c.state!=='complete') out.push('<span class="nfg-chip '+nfgStateCls(c.state)+'">'+scEsc(nfgStateLabel(c.state))+(c.pct!=null?' · '+c.pct+'% '+scEsc(hi?'समय पर':'on time'):'')+'</span>');
   if(g){ var R=NF_GRAD_RES[g.result]||NF_GRAD_RES.notyet; out.push('<span class="nfg-chip '+R.c+'">'+R.ic+' '+scEsc(hi?R.hi:R.en)+' · '+g.overall+'%</span>'); }
+  else if(c&&c.D&&c.idx!=null&&c.idx>c.D.closeIdx) out.push('<span class="nfg-chip a">⏳ '+scEsc(hi?'बंद — परिणाम बाकी':'Closed — graduation pending')+'</span>');
   else if(c&&c.D&&c.idx!=null&&c.idx>=49) out.push('<span class="nfg-chip b">📅 '+scEsc(hi?'बंद ':'Closes ')+nfgFmt(c.D.close)+'</span>');
   if(cu&&!cu.done) out.push('<span class="nfg-chip p">🔁 '+scEsc(hi?'कैच-अप':'Catch-up')+' '+(cu.free?(hi?'निःशुल्क':'free'):(cu.paid?(hi?'भुगतान हुआ':'paid'):(hi?'भुगतान बाकी':'payment due')))+'</span>');
   if(n&&n.status){ var lab=(NF_NHSRC_ST.find(function(x){ return x[0]===n.status; })||[])[1]||n.status; out.push('<span class="nfg-chip '+(n.status==='certified'?'g':'b')+'">🏛 NHSRC: '+scEsc(lab)+'</span>'); var due=nfgNhsrcDue(n); if(due&&due.soon) out.push('<span class="nfg-chip a">🗓 '+scEsc(due.label)+' '+scEsc(hi?'देय':'due')+' '+nfgFmt(due.date)+'</span>'); }
