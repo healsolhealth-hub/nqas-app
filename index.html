@@ -3547,7 +3547,7 @@ function cpItemHTML(di,ci,cp,d,c,isLocked){
         ${c.taskDone&&c.cpVerify&&scCpvValid(c,ci)?`<div class="scx-cpv-ok">${scCpvNote(scCpvValid(c,ci))}</div>`:(c.verified&&c.verifyMode==='sample'?`<div class="scx-cpv-acc">✓ Accepted after sample verification</div>`:'')}
       </div>
       <button class="cp-help-btn" onclick="event.stopPropagation();showHelp(${di},${ci})" title="Assessment guidance">ⓘ</button>
-      ${cp.video ? (isVideoUrl(cp.video)
+      ${(cp.video||cp.videoHi) ? (isVideoUrl(cp.video||cp.videoHi)
         ? `<button class="cp-video-btn" onclick="event.stopPropagation();scPlayCpVideo(${di},${ci})" title="Watch training video" style="background:#EFF6FF;color:#1D4ED8;border:1.5px solid #BFDBFE;border-radius:8px;padding:4px 9px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;">▶ Video</button>`
         : `<button class="cp-video-btn" onclick="event.stopPropagation();scPlayCpVideo(${di},${ci})" title="Open resource link" style="background:#F0FDF4;color:#15803D;border:1.5px solid #86EFAC;border-radius:8px;padding:4px 9px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;">🔗 Link</button>`) : ''}
     </div>
@@ -4515,7 +4515,8 @@ function aeFilterCPs(fromUser){
         + '<input type="checkbox" data-kind="method" value="'+m+'" data-ci="'+ci+'" '+chk+' onchange="aeUpdateMethod(this)" style="width:11px;height:11px;cursor:pointer;"> '+m+'</label>';
     });
     r3 += '<span style="font-size:10px;font-weight:700;color:#94A3B8;margin-left:auto;">🎬 Video:</span>'
-      + '<input type="url" data-field="video" data-ci="'+ci+'" onchange="aeUpdateField(this)" placeholder="YouTube, Wix video (video.wixstatic.com) or link…" value="'+scEsc(cp.video||'')+'" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:4px 9px;font-size:11px;font-family:inherit;min-width:200px;flex:1;">';
+      + '<input type="url" data-field="video" data-ci="'+ci+'" onchange="aeUpdateField(this)" placeholder="YouTube, Wix video (video.wixstatic.com) or link…" value="'+scEsc(cp.video||'')+'" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:4px 9px;font-size:11px;font-family:inherit;min-width:200px;flex:1;">'
+      + '<input type="url" data-field="videoHi" data-ci="'+ci+'" onchange="aeUpdateField(this)" placeholder="Hindi video link (optional)" value="'+scEsc(cp.videoHi||'')+'" style="border:1.5px solid #E2E8F0;border-radius:7px;padding:4px 9px;font-size:11px;font-family:inherit;min-width:160px;flex:1;">';
     r3 += '</div>';
 
     card.innerHTML = r1 + r2 + r3;
@@ -5506,7 +5507,7 @@ function scReadiness(progId,cards,role){
       var s=scNormScore(c.cpScores?c.cpScores[ci]:null); if(s===null) return;
       res.xp+=s; res.max+=2;
       var a=scAocKey(cp,d); _scAddBucket(res.byAoc,a,s);
-      var sv=cp.svc||cp.service||d.service||'Other'; _scAddBucket(res.byService,sv,s);
+      var sv=cp.svc||cp.service||d.service||'Other'; _scAddBucket(res.byService,sv,s); (Array.isArray(cp.cc)?cp.cc:[]).forEach(function(a){ if(a&&a!==sv) _scAddBucket(res.byService,a,s); });
       var gr=c.gapRetries?c.gapRetries[ci]:null;
       var att=(gr&&gr.attempts)?gr.attempts:[];
       if(s<2) res.gaps.push({di:di,ci:ci,cp:cp,day:d,score:s,closed:false,attempts:att,aoc:a,service:sv});
@@ -9876,7 +9877,7 @@ function scCpmFiltered(){
   return scCpmAll({pkg:u.pkg==='all'?null:'nqas_'+u.pkg,includeRetired:u.kind==='retired'}).filter(function(c){
     if(u.kind==='retired'){ if(!c.retired) return false; } else if(u.kind&&c.kind!==u.kind) return false;
     if(u.aoc&&c.aoc!==u.aoc) return false;
-    if(u.svc&&c.svc!==u.svc) return false;
+    if(u.svc&&c.svc!==u.svc&&!(typeof nfCcOf==='function'&&nfCcOf(c).indexOf(u.svc)>=0)) return false;
     if(u.role&&c.r.indexOf(u.role)<0) return false;
     if(q&&(c.id+' '+c.t+' '+(c.hi||'')+' '+c.me).toLowerCase().indexOf(q)<0) return false;
     return true;
@@ -10238,7 +10239,7 @@ scCpmFiltered=function(){
     if(u.aoc&&c.aoc!==u.aoc) return false;
     if(u.std&&c.std!==u.std) return false;
     if(u.me&&c.me!==u.me) return false;
-    if(u.svc&&c.svc!==u.svc) return false;
+    if(u.svc&&c.svc!==u.svc&&!(typeof nfCcOf==='function'&&nfCcOf(c).indexOf(u.svc)>=0)) return false;
     if(u.role&&c.r.indexOf(u.role)<0) return false;
     if(q&&(c.id+' '+c.t+' '+(c.hi||'')+' '+c.me+' '+c.std).toLowerCase().indexOf(q)<0) return false;
     return true;
@@ -10749,11 +10750,11 @@ scCpmEdit=async function(id,presetMe){
   };
   scCpmCsv=function(){
     var rows=[['ID','Order','Kind','Packages','Category','AoC','AoC title','Standard','Standard title','Standard minimum %','ME','ME title','Service','Group','Roles','Assessor round','Methods','Checkpoint','Hindi','Original wording',
-      'Official MoV','MoV items (English)','MoV items (Hindi)','What Full looks like','Video','Retired','Used on']];
+      'Official MoV','MoV items (English)','MoV items (Hindi)','What Full looks like','Video','Video (Hindi)','Cross-cutting areas','Retired','Used on']];
     scCpmAll({includeRetired:true}).forEach(function(c){
       rows.push([c.id,c.ord||'',c.kind,c.pk.join(' '),c.aoc?scAocCat(c.aoc):'',c.aoc,c.aoc?SC_CPM_AOC[c.aoc]:'',c.std,scRegTitle('std',c.std),c.std?scNqasStdMin(c.std):'',c.me,scRegTitle('me',c.me),
         c.svc,SC_SVC_GROUP_LABEL[scSvcGroup(c.svc)],c.r.join(' '),c.round||'',c.method.join(' '),c.t,c.hi||'',c.t0||'',c.mov||'',scItemsToText(c.items,'en'),scItemsToText(c.items,'hi'),c.full||'',
-        c.video||'',c.retired?'yes':'',scCpmUsage(c.id).map(function(x){ return x.pkg+' D'+x.day; }).join(' ')]);
+        c.video||'',c.videoHi||'',(typeof nfCcOf==='function'?nfCcOf(c):[]).join('; '),c.retired?'yes':'',scCpmUsage(c.id).map(function(x){ return x.pkg+' D'+x.day; }).join(' ')]);
     });
     return rows.map(function(r){ return r.map(function(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(','); }).join('\n');
   };
@@ -11263,7 +11264,7 @@ function scBkFinish(map){ Object.keys(map).forEach(function(k){ var b=map[k]; b.
 function scDimsEmpty(){ return {byAoc:{},byStd:{},byMe:{},byService:{},byCat:{}}; }
 function scDimsAdd(R,cp,s,assessed){
   scBkAdd(R.byAoc,cp.aoc,s,assessed); scBkAdd(R.byStd,cp.std,s,assessed); scBkAdd(R.byMe,cp.me,s,assessed);
-  scBkAdd(R.byService,cp.svc||'Other',s,assessed); scBkAdd(R.byCat,scAocCat(cp.aoc),s,assessed);
+  scBkAdd(R.byService,cp.svc||'Other',s,assessed); scBkAdd(R.byCat,scAocCat(cp.aoc),s,assessed); (Array.isArray(cp.cc)?cp.cc:[]).forEach(function(a){ if(a&&a!==(cp.svc||'Other')) scBkAdd(R.byService,a,s,assessed); });   // cross-cutting areas count too
 }
 function scDimsFinish(R){ ['byAoc','byStd','byMe','byService','byCat'].forEach(function(k){ scBkFinish(R[k]); }); R.pct=R.max?Math.round(R.xp/R.max*100):0; }
 // a person's occurrences of each checkpoint (marked-done days), oldest first
@@ -18743,6 +18744,104 @@ async function nfFixEdit(id){
     var has=!!(NF_FIX[c.id]||(c.fix&&Object.keys(c.fix).length));
     return h.replace('<button class="scx-btn sm ghost" style="flex:0 0 auto;" onclick="scCpmEdit(','<button class="scx-btn sm ghost" style="flex:0 0 auto;" title="How to fix" onclick="nfFixEdit(\''+scJs(c.id)+'\')">🔧'+(c.fix?'✎':'')+'</button><button class="scx-btn sm ghost" style="flex:0 0 auto;" onclick="scCpmEdit('); };
 })();
+</script>
+
+<!-- ══ Card Editor: service package AND cross-cutting areas (your own list) · Hindi video link ══ -->
+<style id="nf-cc-css">
+.scm-meta .cc{background:#F5F3FF;color:#5B21B6;}
+.nf-vidnote{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:100000;background:#1F2937;color:#fff;font-size:12.5px;padding:7px 14px;border-radius:20px;}
+</style>
+<script id="nf-cc">
+SC_CPM_FIELDS.push('cc','videoHi');
+// Cross-cutting areas: HealSol's own list (shared/sc_cc_areas); starts with the real NQAS areas, never the old programme-day names
+var NF_CC_DEFAULT=['Patient Rights','Infrastructure','Human Resources','Drugs & Equipment','General Clinical Processes','Hand Hygiene','Sterilisation','BMW & Housekeeping','Records & MIS','Patient Safety','QI System','Outcomes'];
+var _nfCcList=null;
+function nfCcAreas(){ return (_nfCcList&&_nfCcList.length?_nfCcList:NF_CC_DEFAULT).slice(); }
+async function nfCcLoad(){ try{ var v=await fbGet('shared/sc_cc_areas'); var L=Array.isArray(v)?v:(v&&typeof v==='object'?Object.keys(v).map(function(k){ return v[k]; }):null); if(L) _nfCcList=L.filter(function(x){ return typeof x==='string'&&x.trim(); }); }catch(e){} return nfCcAreas(); }
+async function nfCcSave(list){ var L=[]; list.forEach(function(x){ x=String(x||'').trim(); if(x&&L.indexOf(x)<0&&SC_SVC_GROUPS.programme.indexOf(x)<0) L.push(x); });
+  var ok=await fbSet('shared/sc_cc_areas',L); if(ok) _nfCcList=L; return ok; }
+function nfIsPkg(s){ return SC_SVC_GROUPS.service.indexOf(s)>=0; }
+// a checkpoint's areas: its own list, else (older records) the single "Service / area" when that was a cross-cutting area
+function nfCcOf(c){ if(!c) return []; var L=Array.isArray(c.cc)?c.cc.filter(Boolean):[]; if(!L.length&&c.svc&&!nfIsPkg(c.svc)&&SC_SVC_GROUPS.programme.indexOf(c.svc)<0) L=[c.svc]; return L; }
+// master values onto day cards: cross-cutting areas and the Hindi video travel too
+(function(){ var oA=scCpmApply; scCpmApply=function(cp,id){ var r=oA.apply(this,arguments), m=scCpmGet(id); if(m&&r!==cp){ r.cc=Array.isArray(m.cc)?m.cc.slice():(cp.cc||null); r.videoHi=m.videoHi||cp.videoHi||''; } return r; }; })();
+// ── checkpoint dialog: Service package (one) + Cross-cutting areas (tick any) + "+ add new" · Video (English) + Video (Hindi) ──
+var _nfCcEdit={id:null}, _nfCcPending=null;
+(function(){
+  var oEdit=scCpmEdit;
+  scCpmEdit=async function(id){ _nfCcEdit.id=id||null; await nfCcLoad(); return oEdit.apply(this,arguments); };
+  var oDlg=scDialog;
+  scDialog=function(o){
+    var F=(o&&o.fields)||[], i=F.findIndex(function(f){ return f&&f.key==='svc'&&f.label==='Service / area'; });
+    if(i<0) return oDlg.apply(this,arguments);
+    _nfCcPending=null;
+    var c=_nfCcEdit.id?scCpmGet(_nfCcEdit.id):null, cur=F[i].value||'', mine=nfCcOf(c||{svc:cur});
+    var areas=nfCcAreas(); mine.forEach(function(a){ if(areas.indexOf(a)<0) areas.push(a); });
+    var pk=SC_SVC_GROUPS.service.slice(), fields=F.slice();
+    fields.splice(i,1,
+      {key:'svcPkg',label:'Service package',type:'select',value:nfIsPkg(cur)?cur:'',options:[{value:'',label:'— none —'}].concat(pk.map(function(s){ return {value:s,label:s}; }))},
+      {key:'svcAreas',label:'Cross-cutting areas (tick all that apply)',type:'checklist',value:mine,options:areas.map(function(s){ return {value:s,label:s}; })},
+      {key:'svcAreaNew',label:'+ Add a new cross-cutting area (optional)',value:'',placeholder:'e.g. Community Engagement — it is added to the list for every checkpoint'});
+    var vi=fields.findIndex(function(f){ return f&&f.key==='video'; });
+    if(vi>=0){ fields[vi]=Object.assign({},fields[vi],{label:'Video link — English (optional)'}); fields.splice(vi+1,0,{key:'videoHi',label:'Video link — Hindi (optional)',value:c?c.videoHi||'':'',placeholder:'Shown when the app is in Hindi'}); }
+    var o2=Object.assign({},o,{fields:fields}), oVal=o.validate;
+    o2.validate=function(v){
+      if(v.videoHi&&!(typeof isVideoUrl==='function'?isVideoUrl(v.videoHi):/^https:\/\//.test(v.videoHi))) return 'The Hindi video link cannot be played. Use YouTube, Vimeo, Wix (video.wixstatic.com) or a direct .mp4 link.';
+      var nw=String(v.svcAreaNew||'').trim(); if(nw&&(nfIsPkg(nw)||SC_SVC_GROUPS.programme.indexOf(nw)>=0)) return '"'+nw+'" is a service package or programme day, not a cross-cutting area.';
+      var A=(v.svcAreas||[]).slice(); if(nw) A.push(nw);
+      return oVal?oVal(Object.assign({},v,{svc:v.svcPkg||A[0]||''})):null; };
+    return oDlg.call(this,o2).then(async function(v){
+      if(!v) return v;
+      var A=(v.svcAreas||[]).slice(), nw=String(v.svcAreaNew||'').trim();
+      if(nw){ nw.split(',').map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(x){ if(A.indexOf(x)<0) A.push(x); });
+        var L=nfCcAreas(); A.forEach(function(x){ if(L.indexOf(x)<0) L.push(x); }); await nfCcSave(L); }
+      v.svc=v.svcPkg||A[0]||'';
+      _nfCcPending={id:_nfCcEdit.id,cc:A,videoHi:String(v.videoHi||'').trim(),at:Date.now()};
+      delete v.svcPkg; delete v.svcAreas; delete v.svcAreaNew; delete v.videoHi;
+      return v; });
+  };
+  var oSave=scCpmSave;
+  scCpmSave=async function(id,vals){
+    var p=_nfCcPending; if(p&&Date.now()-p.at<180000&&(p.id===id||p.id==null)){ _nfCcPending=null; vals=Object.assign({},vals,{cc:p.cc,videoHi:p.videoHi}); }
+    return oSave.call(this,id,vals); };
+  var oAdd=scCpmAdd;
+  scCpmAdd=async function(vals){ var id=await oAdd.apply(this,arguments); if(id&&_nfCcPending&&_nfCcPending.id==null) await scCpmSave(id,{}); return id; };
+})();
+// ── Card Editor list: area chips, filter by area, manage the list ──
+(function(){
+  var oRow=scCpmRowHTML;
+  scCpmRowHTML=function(c){ var h=oRow.apply(this,arguments), L=nfCcOf(c).filter(function(a){ return a!==c.svc; });
+    if(c.videoHi) L=L; var chips=L.map(function(a){ return '<span class="cc">'+scEsc(a)+'</span>'; }).join('')+(c.videoHi?'<span><i class="ti ti-video"></i> हिंदी</span>':'');
+    return chips?h.replace('<span class="pk">',chips+'<span class="pk">'):h; };
+  var oR=scCpmRender;
+  scCpmRender=function(){ var r=oR.apply(this,arguments);
+    try{ var b=document.querySelector('#scm-panel .rd-svcsel:nth-of-type(2)'), sels=[].slice.call(document.querySelectorAll('#scm-panel .rd-svcsel'));
+      var cc=sels.find(function(s){ return s.options[0]&&/cross-cutting/i.test(s.options[0].text); });
+      if(cc){ var u=_scCpmUi; cc.innerHTML='<option value="">All cross-cutting areas</option>'+nfCcAreas().map(function(n){ return '<option value="'+scEsc(n)+'"'+(u.svc===n?' selected':'')+'>'+scEsc(n)+'</option>'; }).join('');
+        if(!document.getElementById('nf-cc-manage')){ var btn=document.createElement('button'); btn.id='nf-cc-manage'; btn.type='button'; btn.className='scx-btn sm ghost'; btn.textContent='Areas…'; btn.title='Cross-cutting areas list'; btn.onclick=nfCcManage; cc.parentNode.insertBefore(btn,cc.nextSibling); } } }catch(e){}
+    return r; };
+})();
+async function nfCcManage(){
+  if(!scCpmCanEdit()) return; var L=await nfCcLoad();
+  var v=await scDialog({title:'Cross-cutting areas',icon:'🏷️',wide:true,okLabel:'Save list',
+    message:'One area per line. These are the areas you can tick for any checkpoint. Removing an area here does not untick it on checkpoints that already have it — edit those checkpoints to move them.',
+    fields:[{key:'list',label:'Areas',type:'textarea',rows:14,value:L.join('\n')}]});
+  if(!v) return; var ok=await nfCcSave(String(v.list||'').split('\n'));
+  showToast(ok?'Cross-cutting areas saved.':'Could not save — check connection.',ok?'ok':'err'); if(ok) scCpmRender();
+}
+(function(){ if(typeof nfAdminApply==='function'){ var o=nfAdminApply; nfAdminApply=function(){ try{ if(appMode==='sc-admin'&&!_nfCcList) nfCcLoad(); }catch(e){} return o.apply(this,arguments); }; } })();
+// ── checks: Hindi video missing ──
+(function(){ if(typeof scCpmChecks!=='function') return; var oC=scCpmChecks;
+  scCpmChecks=function(pkgCode){ var out=oC.apply(this,arguments), pkg=pkgCode&&pkgCode!=='all'?'nqas_'+pkgCode:null;
+    var ids=scCpmAll({pkg:pkg}).filter(function(c){ return c.video&&!c.videoHi; }).map(function(c){ return c.id; });
+    out.push({key:'noHindiVideo',level:ids.length?'info':'ok',label:'Video without a Hindi version',detail:'Staff using Hindi see the English video with a note until a Hindi link is added.',ids:ids,n:ids.length,view:'cps'});
+    return out; }; })();
+// ── staff: play the video in the app's language ──
+function nfVidFor(cp){ if(!cp) return null; var hi=typeof _appLang!=='undefined'&&_appLang==='hi';
+  if(hi&&cp.videoHi) return {url:cp.videoHi}; if(cp.video) return {url:cp.video,note:hi}; if(cp.videoHi) return {url:cp.videoHi}; return null; }
+scPlayCpVideo=function(di,ci){ var d=getDay(di), cp=d&&d.cps?d.cps[ci]:null, v=nfVidFor(cp); if(!v) return;
+  if(v.note){ var n=document.createElement('div'); n.className='nf-vidnote'; n.textContent='हिंदी वीडियो जल्द आएगा — अभी अंग्रेज़ी वीडियो'; document.body.appendChild(n); setTimeout(function(){ n.remove(); },3500); }
+  showVideoPopup(v.url); };
 </script>
 
 </body>
