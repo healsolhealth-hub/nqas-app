@@ -19635,7 +19635,13 @@ var _nfDirty={};
 .nfi-set{background:#fff;border:1px solid var(--br,#E2E8F0);border-radius:16px;padding:16px 18px;margin:0 0 14px;} .nfi-set h3{margin:0 0 6px;font-size:15px;}
 .nfi-set .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0;font-size:12.5px;} .nfi-set img{height:28px;border-radius:4px;border:1px solid #E5E7EB;}
 .nfi-set .warn{font-size:11.5px;color:#92400E;background:#FFFBEB;border-radius:8px;padding:6px 9px;margin:6px 0;}
-#nf-verify .nfi-v{max-width:420px;margin:16px auto;background:#fff;border-radius:18px;padding:18px;border:1px solid #E2E8F0;font-family:inherit;}
+#nf-verify .nfi-v{max-width:420px;margin:12px auto;background:#fff;border-radius:18px;padding:0 0 14px;border:1px solid #86EFAC;font-family:inherit;overflow:hidden;text-align:center;}
+#nf-verify .nfi-v .nfi-ok{background:#DCFCE7;color:#14532D;font-weight:700;font-size:14px;padding:9px 12px;display:flex;align-items:center;justify-content:center;gap:6px;}
+#nf-verify .nfi-v .nfi-ok i.ti{font-size:20px;} #nf-verify .nfi-v > div:not(.nfi-ok),#nf-verify .nfi-v h2,#nf-verify .nfi-v p{padding:0 14px;}
+#nf-verify .nfi-v .nfi-upd{font-size:11.5px;color:#64748B;margin:6px 0 0;}
+#nf-verify.nfi-vp{-webkit-overflow-scrolling:touch;} #nf-verify.nfi-vp .nfv-top{padding:8px 14px;} #nf-verify.nfi-vp .nfv-top img{height:24px;} #nf-verify.nfi-vp .nfv-top img+img{height:15px;}
+#nf-verify.nfi-vp .nfv-foot{margin:8px 0 14px;}
+@media (max-width:520px){ #nf-verify .nfi-v{margin:10px 10px;} }
 #nf-verify .nfi-v h2{margin:4px 0;font-size:20px;} #nf-verify .nfi-v .nfi-st{font-size:24px;} #nf-verify .nfi-v .nfi-st i{color:#E5E7EB;}
 </style>
 <script id="nf-imp">
@@ -19780,11 +19786,13 @@ async function nfImpVerifyBoot(){
   var pg=document.createElement('div'); pg.id='nf-verify'; pg.innerHTML='<div class="nfv-top"><img src="'+SC_BRAND.logoNqas+'" alt="NQAS"><img src="'+SC_BRAND.logoHealsol+'" alt="HealSol Academy"></div><div class="nfv-st" style="background:#fff;">Checking…</div>'; document.body.appendChild(pg);
   var rec=null; if(/^[a-z0-9]{6,20}$/.test(id)){ try{ if(typeof db==='undefined'||!db) initFirebase(); }catch(e){} for(var i=0;i<50&&(typeof db==='undefined'||!db);i++) await new Promise(function(r){ setTimeout(r,100); }); rec=await fbGet('sc_impact_public/'+id); }
   var lv=rec?NF_LEVEL[rec.level]||{}:{};
+  pg.className='nfi-vp';
   pg.innerHTML='<div class="nfv-top"><img src="'+SC_BRAND.logoNqas+'" alt="NQAS"><img src="'+SC_BRAND.logoHealsol+'" alt="HealSol Academy"></div>'
-    +(rec?'<div class="nfv-st ok"><i class="ti ti-shield-check"></i><div><b>Genuine NQAS | FAST impact card</b><small>Worked out by HealSol Academy from verified programme data · updated '+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</small></div></div>'
-      +'<div class="nfi-v"><div style="color:#64748B;font-size:12px;font-weight:700;">'+scEsc((rec.role||'').toUpperCase())+'</div><h2>'+scEsc(rec.name)+'</h2><div style="font-weight:700;color:#0F766E;font-size:16px;">'+(lv.ic||'')+' '+scEsc(lv.en||'')+'</div>'+nfImpStars(rec.stars)
-      +'<p style="font-size:13.5px;color:#334155;">'+scEsc([rec.facility,rec.district,rec.state].filter(Boolean).join(' · '))+(rec.facilities>1?' · '+rec.facilities+' facilities':'')+'</p>'
-      +(rec.pop?'<p style="font-size:13.5px;"><b>'+scEsc((rec.cert||rec.result==='ready'?'Ensuring':'Working to ensure')+' quality of care for '+Number(rec.pop).toLocaleString('en-IN')+' people')+'</b></p>':'')+'</div>'
+    +(rec?'<div class="nfi-v"><div class="nfi-ok"><i class="ti ti-shield-check"></i>Genuine NQAS | FAST impact card</div>'
+      +'<div style="color:#64748B;font-size:12px;font-weight:700;margin-top:10px;">'+scEsc((rec.role||'').toUpperCase())+'</div><h2>'+scEsc(rec.name)+'</h2><div style="font-weight:700;color:#0F766E;font-size:16px;">'+(lv.ic||'')+' '+scEsc(lv.en||'')+'</div>'+nfImpStars(rec.stars)
+      +'<p style="font-size:13.5px;color:#334155;margin:6px 0;">'+scEsc([rec.facility,rec.district,rec.state].filter(Boolean).join(' · '))+(rec.facilities>1?' · '+rec.facilities+' facilities':'')+'</p>'
+      +(rec.pop?'<p style="font-size:13.5px;margin:6px 0;"><b>'+scEsc((rec.cert||rec.result==='ready'?'Ensuring':'Working to ensure')+' quality of care for '+Number(rec.pop).toLocaleString('en-IN')+' people')+'</b></p>':'')
+      +'<p class="nfi-upd">Worked out by HealSol Academy from verified programme data · updated '+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</p></div>'
       :'<div class="nfv-st no"><i class="ti ti-alert-triangle"></i><div><b>Card not found</b><small>This impact card could not be found. Ask the person to share it again from the app.</small></div></div>')
     +'<div class="nfv-foot">NQAS | FAST · by HealSol Academy · <a href="'+scEsc(NF_APP_HOME)+'" target="_blank" rel="noopener">Learn about NQAS | FAST</a></div>';
   return true;
