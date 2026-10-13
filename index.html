@@ -19682,6 +19682,12 @@ body.nf-admin:not(.nfv-recog) .admin-main > [data-nfv="recog"]{display:none!impo
 .nfr-strip{display:flex;align-items:center;gap:10px;border:1px solid #E2E8F0;border-radius:10px;padding:8px 12px;background:#fff;min-height:44px;font-size:11px;color:#64748B;} .nfr-strip img{height:40px;max-width:200px;object-fit:contain;} .nfr-strip.none{background:#F8FAFC;}
 .nfr-err{color:#B91C1C;font-size:13px;font-weight:600;padding:0 20px;min-height:4px;}
 .nfr-fb{display:flex;justify-content:flex-end;gap:8px;padding:10px 20px 0;}
+.nfr-crit{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:12px 14px;margin:6px 0 14px;} .nfr-crit .nfr-head{margin:0;align-items:center;} .nfr-crit ol,.nfr-clist{margin:8px 0 0;padding-left:22px;font-size:13px;color:#334155;line-height:1.6;} .nfr-crit p{margin:6px 0 0;}
+.nfr-kind{display:grid;grid-template-columns:1fr 1fr;gap:10px;} .nfr-kind label{border:1.5px solid #E2E8F0;border-radius:12px;padding:10px 12px;cursor:pointer;margin:0!important;} .nfr-kind label.on{border-color:var(--teal-dk,#135A55);background:#F0FDFA;} .nfr-kind label.dis{opacity:.55;cursor:not-allowed;}
+.nfr-kind small{display:block;font-weight:400;color:#64748B;font-size:11.5px;margin:2px 0 0 22px;}
+.nfr-fbox{max-height:170px;overflow:auto;border:1.5px solid #CBD5E1;border-radius:10px;padding:6px 10px;margin:-4px 0 10px;} .nfr-fc{display:flex!important;gap:8px;align-items:baseline;font-weight:400!important;margin:4px 0!important;} .nfr-fc small{color:#64748B;font-size:11.5px;}
+.nfr-pt b + .nfr-chip{vertical-align:2px;margin-left:4px;} .nfr-pt small{display:block;margin-top:2px;} .nfr-form label.nfr-sw{display:inline-flex;font-weight:500;margin:4px 0 6px;} .nfr-t td small{display:block;}
+@media (max-width:640px){ .nfr-kind{grid-template-columns:1fr;} }
 @media (max-width:640px){ .nfr-head{flex-direction:column;} .nfr-2{grid-template-columns:1fr;} .nfr-card{padding:14px;} }
 #nf-verify .nfi-v{max-width:420px;margin:12px auto;background:#fff;border-radius:18px;padding:0 0 14px;border:1px solid #86EFAC;font-family:inherit;overflow:hidden;text-align:center;}
 #nf-verify .nfi-v .nfi-ok{background:#DCFCE7;color:#14532D;font-weight:700;font-size:14px;padding:9px 12px;display:flex;align-items:center;justify-content:center;gap:6px;}
@@ -19745,7 +19751,10 @@ async function nfImpCanvas(rec){
   g.font='600 44px '+F; g.fillStyle='#E2E8F0'; g.fillText((rec.role||'')+(nfImpMain(rec).name&&!nfImpHideFac(rec)&&(rec.facilities||[]).length===1?' · '+nfImpMain(rec).name:''),W/2,395);
   g.font='700 58px '+F; g.fillStyle='#FDE68A'; g.fillText((lv.ic||'')+' '+nfImpLv(rec.level),W/2,500);
   if(rec.stars){ g.font='700 92px '+F; var s='★★★★★'.slice(0,rec.stars), e='★★★★★'.slice(rec.stars), ws=g.measureText(s).width, we=g.measureText(e).width, x0=W/2-(ws+we)/2; g.textAlign='left'; g.fillStyle='#FBBF24'; g.fillText(s,x0,610); g.fillStyle='rgba(255,255,255,.25)'; g.fillText(e,x0+ws,610); g.textAlign='center'; }
-  var N=nfImpNums(rec), bw=300, gap=30, bx=(W-3*bw-2*gap)/2, by=670;
+  var noNums=rec.kind==='honorary'&&!(rec.nums&&rec.nums.facilities);
+  if(rec.level==='pioneer'&&rec.citation){ g.font='italic 500 '+(noNums?40:34)+'px '+F; g.fillStyle='#FDE68A'; nfImpWrap(g,'“'+rec.citation+'”',W/2,noNums?640:565,W-160,noNums?54:42); }
+  if(noNums){ var ms=nfImpMain(rec), pl=[((rec.facilities||[]).length?ms.state:rec.state)||'',rec.pioneerYear||''].filter(Boolean).join(' · '); if(pl){ g.font='500 38px '+F; g.fillStyle='#CCFBF1'; g.fillText(pl,W/2,rec.citation?880:640); } }
+  var N=noNums?[]:nfImpNums(rec), bw=300, gap=30, bx=(W-3*bw-2*gap)/2, by=670;
   N.forEach(function(x,i){ var X=bx+i*(bw+gap); g.fillStyle='rgba(255,255,255,.12)'; nfImpRound(g,X,by,bw,190,28); g.fill(); g.fillStyle='#fff'; g.font='700 80px '+F; g.fillText(String(x[0]),X+bw/2,by+105); g.font='500 34px '+F; g.fillStyle='#CCFBF1'; g.fillText(x[1],X+bw/2,by+160); });
   var care=nfImpCare(rec,nfImpVillages(rec)); if(care){ g.font='600 40px '+F; g.fillStyle='#fff'; nfImpWrap(g,care,W/2,950,W-140,52); }
   // QR + verify note
@@ -19841,7 +19850,7 @@ async function nfImpVerifyBoot(){
       +'<div style="color:#64748B;font-size:12px;font-weight:700;margin-top:10px;">'+scEsc((rec.role||'').toUpperCase())+'</div><h2>'+scEsc(rec.name)+'</h2><div style="font-weight:700;color:#0F766E;font-size:16px;">'+(lv.ic||'')+' '+scEsc(lv.en||'')+'</div>'+nfImpStars(rec.stars)
       +'<p style="font-size:13.5px;color:#334155;margin:6px 0;">'+scEsc([rec.facility,rec.district,rec.state].filter(Boolean).join(' · '))+(rec.facilities>1?' · '+rec.facilities+' facilities':'')+'</p>'
       +(rec.pop?'<p style="font-size:13.5px;margin:6px 0;"><b>'+scEsc((rec.cert||rec.result==='ready'?'Ensuring':'Working to ensure')+' quality of care for '+Number(rec.pop).toLocaleString('en-IN')+' people')+'</b></p>':'')
-      +(rec.citation?'<p class="nfi-cit">🌟 Quality Pioneer'+(rec.pioneerYear?' '+scEsc(rec.pioneerYear):'')+': “'+scEsc(rec.citation)+'”</p>':'')+'<p class="nfi-upd">Worked out by HealSol Academy from verified programme data · updated '+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</p></div>'
+      +(rec.citation?'<p class="nfi-cit">🌟 Quality Pioneer'+(rec.pioneerYear?' '+scEsc(rec.pioneerYear):'')+': “'+scEsc(rec.citation)+'”</p>':'')+'<p class="nfi-upd">'+(rec.honorary?'Title given by HealSol Academy':'Worked out by HealSol Academy from verified programme data')+' · updated '+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</p></div>'
       :'<div class="nfv-st no"><i class="ti ti-alert-triangle"></i><div><b>Card not found</b><small>This impact card could not be found. Ask the person to share it again from the app.</small></div></div>')
     +'<div class="nfv-foot">NQAS | FAST · by HealSol Academy · <a href="'+scEsc(NF_APP_HOME)+'" target="_blank" rel="noopener">Learn about NQAS | FAST</a></div>';
   return true;
@@ -19868,7 +19877,7 @@ function nfrPlace(x){ return x.district?x.district+', '+(x.state||nfrStateName(x
 function nfrBy(){ if(_nfR.by) return _nfR.by; var k=(typeof _nfAuth!=='undefined'&&_nfAuth&&_nfAuth.email||'').split('@')[0]; _nfR.by=k||'HealSol';
   if(k) fbGet('sc_healsol_admins/'+k+'/name').then(function(n){ if(n) _nfR.by=n; }).catch(function(){}); return _nfR.by; }
 // the card strip: logos for the person's (first) facility
-nfImpPartnersFor=function(rec){ var m=nfImpMain(rec), st=nfrStateCode(m.state), ds=nfImpSlug(m.district), L=_nfImp.logos||{};
+nfImpPartnersFor=function(rec){ var m=nfImpMain(rec), st=nfrStateCode(m.state||rec.state), ds=nfImpSlug(m.district), L=_nfImp.logos||{};
   if(!st) return []; var all=Object.keys(L).map(function(k){ return L[k]; }).filter(function(x){ return x&&x.img&&x.st===st&&nfrLive(x); });
   var d=all.filter(function(x){ return x.district&&nfImpSlug(x.district)===ds; }); if(!d.length) d=all.filter(function(x){ return !x.district; });
   return d.sort(function(a,b){ return String(a.at||'').localeCompare(String(b.at||'')); }).slice(0,2); };
@@ -19878,8 +19887,8 @@ nfImpPartnersFor=function(rec){ var m=nfImpMain(rec), st=nfrStateCode(m.state), 
 async function nfrRender(load){
   if(appMode!=='sc-admin') return; var main=document.querySelector('#admin-app .admin-main'); if(!main) return;
   var box=document.getElementById('nf-recog'); if(!box){ box=document.createElement('div'); box.id='nf-recog'; box.dataset.nfv='recog'; main.insertBefore(box,main.firstChild); }
-  if(load||!_nfImp.logos||!_nfImp.cfg){ if(!box.innerHTML) box.innerHTML='<div class="nfr-empty">Loading…</div>';
-    try{ _nfImp.cfg=await fbGet('shared/sc_impact_config')||{}; _nfImp.logos=await fbGet('shared/sc_impact_logos')||{}; if(load==='force') _scSupervisors=await fbGet('sc_supervisors')||{}; }catch(e){ _nfImp.cfg=_nfImp.cfg||{}; _nfImp.logos=_nfImp.logos||{}; } }
+  if(load||!_nfImp.logos||!_nfImp.cfg||!_nfR.hon){ if(!box.innerHTML) box.innerHTML='<div class="nfr-empty">Loading…</div>';
+    try{ _nfImp.cfg=await fbGet('shared/sc_impact_config')||{}; _nfImp.logos=await fbGet('shared/sc_impact_logos')||{}; if(load==='force') _scSupervisors=await fbGet('sc_supervisors')||{}; _nfR.hon=await fbGet('sc_pioneers')||{}; _nfR.crit=await fbGet('shared/sc_pioneer_criteria')||{}; }catch(e){ _nfImp.cfg=_nfImp.cfg||{}; _nfImp.logos=_nfImp.logos||{}; } }
   nfrBy();
   var L=_nfImp.logos||{}, nLive=Object.keys(L).filter(function(k){ return nfrLive(L[k]); }).length, P=nfrPioneers();
   box.innerHTML='<div class="nfo-top"><div><h1>Impact &amp; Recognition</h1><small>HealSol only · partner logos on staff impact cards and Quality Pioneer titles</small></div>'
@@ -19985,68 +19994,131 @@ async function nfrLogoSave(){
 }
 
 // ── Quality Pioneer tab ──
+//  Two kinds of Pioneer, same fields under .../pioneer and .../pioneerLog:
+//   sup:{id}  a Quality Mentor (Supervisor login)  → sc_supervisors/{id}
+//   hon:{id}  someone without a login (honorary)   → sc_pioneers/{id} = {name, designation, org, st, state, facilities:{code:true}, removed?}
+//  Pioneer criteria (set by HealSol only): shared/sc_pioneer_criteria = {text, by, at}
 function nfrFacN(u){ var n=nfrSupFacs(u).length; return n+' facilit'+(n===1?'y':'ies'); }
 function nfrSupFacs(u){ var f=u&&u.facilities||{}; return Array.isArray(f)?f:Object.keys(f).filter(function(k){ return f[k]; }); }
 function nfrSupStates(u){ var o={}; nfrSupFacs(u).forEach(function(c){ var f=(scMasterFacilities||{})[c]; if(f&&f.state){ var n=nfrStateName(nfrStateCode(f.state))||f.state; o[n]=1; } }); return Object.keys(o).sort(); }
-function nfrPioneers(){ var S=_scSupervisors||{}; return Object.keys(S).filter(function(id){ return S[id]&&S[id].pioneer&&!S[id].disabled; }); }
 function nfrPio(u){ var p=u&&u.pioneer; return p&&typeof p==='object'?p:(p?{}:null); }
+function nfrPioRec(ref){ var k=ref.slice(0,3), id=ref.slice(4); return k==='sup'?(_scSupervisors||{})[id]:(_nfR.hon||{})[id]; }
+function nfrPioBase(ref){ return (ref.slice(0,3)==='sup'?'sc_supervisors/':'sc_pioneers/')+ref.slice(4); }
+function nfrPioKey(ref){ return ref.slice(0,3)==='sup'?ref.slice(4):'hp_'+ref.slice(4); }   // sc_impact key
+function nfrPioSub(ref,u){ if(ref.slice(0,3)==='sup'){ var st=nfrSupStates(u); return 'Quality Mentor'+(st.length?' · '+st.join(', '):'')+' · '+nfrFacN(u); }
+  return [u.designation,u.org].filter(Boolean).join(', ')+(u.state?' · '+u.state:'')+(nfrSupFacs(u).length?' · '+nfrFacN(u):''); }
+function nfrPioneers(){ var out=[], S=_scSupervisors||{}, P=_nfR.hon||{};
+  Object.keys(S).forEach(function(id){ if(S[id]&&S[id].pioneer&&!S[id].disabled) out.push('sup:'+id); });
+  Object.keys(P).forEach(function(id){ if(P[id]&&P[id].pioneer&&!P[id].removed) out.push('hon:'+id); });
+  return out.sort(function(a,b){ return String(nfrPioRec(a).name||'').localeCompare(String(nfrPioRec(b).name||'')); }); }
+function nfrCriteriaHTML(){ var c=_nfR.crit||{}, L=String(c.text||'').split('\n').map(function(x){ return x.replace(/^[\s•\-*\d.)]+/,'').trim(); }).filter(Boolean);
+  return '<div class="nfr-crit"><div class="nfr-head"><div><b>Pioneer criteria</b> <small class="nfr-muted">set by HealSol only'+(c.by?' · last changed by '+scEsc(c.by)+(c.at?' on '+scEsc(scFmtDate(String(c.at).slice(0,10))):''):'')+'</small></div>'
+    +'<button type="button" class="nfr-btn ghost sm" onclick="nfrCriteriaEdit()"><i class="ti ti-pencil"></i> '+(L.length?'Edit':'Set criteria')+'</button></div>'
+    +(L.length?'<ol>'+L.map(function(x){ return '<li>'+scEsc(x)+'</li>'; }).join('')+'</ol>':'<p class="nfr-muted">No criteria written yet. Set them before giving the title, so every Pioneer is chosen the same way.</p>')+'</div>'; }
+async function nfrCriteriaEdit(){ var c=_nfR.crit||{};
+  var v=await scDialog({title:'Quality Pioneer criteria',icon:'🌟',okLabel:'Save',wide:true,message:'One criterion per line. HealSol confirms these each time the title is given.',fields:[{key:'text',type:'textarea',rows:7,label:'Criteria',required:true,value:c.text||'',placeholder:'e.g. At least 5 years in public health quality\nNational or state NQAS assessor, or mentored 10+ facilities to NQAS Ready\nRecognised contribution to quality of care in the community'}]}); if(!v) return;
+  var rec={text:String(v.text||'').trim(),by:nfrBy(),at:scNowIso()}; var ok=await fbSet('shared/sc_pioneer_criteria',rec); if(ok) _nfR.crit=rec;
+  showToast(ok?'Criteria saved.':'Could not save.',ok?'ok':'err'); nfrRender(); }
 function nfrPioneerHTML(){
-  var S=_scSupervisors||{}, ids=nfrPioneers().sort(function(a,b){ return String(S[a].name||a).localeCompare(String(S[b].name||b)); }), log=[];
-  Object.keys(S).forEach(function(id){ var g=S[id]&&S[id].pioneerLog||{}; Object.keys(g).forEach(function(k){ if(g[k]) log.push(Object.assign({who:S[id].name||id},g[k])); }); });
+  var refs=nfrPioneers(), log=[], S=_scSupervisors||{}, P=_nfR.hon||{};
+  var addLog=function(name,kind,g){ Object.keys(g||{}).forEach(function(k){ if(g[k]) log.push(Object.assign({who:name,kind:kind},g[k])); }); };
+  Object.keys(S).forEach(function(id){ if(S[id]) addLog(S[id].name||id,'Quality Mentor',S[id].pioneerLog); });
+  Object.keys(P).forEach(function(id){ if(P[id]) addLog(P[id].name||id,'No login',P[id].pioneerLog); });
   log.sort(function(a,b){ return String(b.at||'').localeCompare(String(a.at||'')); });
-  var h='<div class="nfr-card"><div class="nfr-head"><div><h3>🌟 Quality Pioneer</h3><p>The top title, given by HealSol to an exceptional Quality Leader (Quality Mentor). It shows on their impact card and Verify page from the next nightly update, or straight away with "Update cards now".</p></div>'
-    +'<button type="button" class="nfr-btn" onclick="nfrPioForm()"><i class="ti ti-plus"></i> Give Pioneer title</button></div>';
-  if(!ids.length) h+='<div class="nfr-empty">No Quality Pioneers yet.</div>';
-  else h+='<div class="nfr-pgrid">'+ids.map(function(id){ var u=S[id], p=nfrPio(u)||{}, st=nfrSupStates(u);
-    return '<div class="nfr-pc"><div class="nfr-pt"><span>🌟</span><div><b>'+scEsc(u.name||id)+'</b><small>Quality Pioneer'+(p.year?' '+scEsc(p.year):'')+(st.length?' · '+scEsc(st.join(', ')):'')+' · '+nfrSupFacs(u).length+' facilities</small></div></div>'
+  var h='<div class="nfr-card"><div class="nfr-head"><div><h3>🌟 Quality Pioneer</h3><p>The top title, given by HealSol to anyone who meets the Pioneer criteria: a Quality Mentor with a login, or someone without a login (for example a national or state assessor, or a senior public-health leader). It shows on their impact card and Verify page from the next nightly update, or straight away with "Update cards now".</p></div>'
+    +'<button type="button" class="nfr-btn" onclick="nfrPioForm()"><i class="ti ti-plus"></i> Give Pioneer title</button></div>'+nfrCriteriaHTML();
+  if(!refs.length) h+='<div class="nfr-empty">No Quality Pioneers yet.</div>';
+  else h+='<div class="nfr-pgrid">'+refs.map(function(ref){ var u=nfrPioRec(ref), p=nfrPio(u)||{}, hon=ref.slice(0,3)==='hon', r=scJs(ref);
+    return '<div class="nfr-pc"><div class="nfr-pt"><span>🌟</span><div><b>'+scEsc(u.name||'')+'</b> <span class="nfr-chip '+(hon?'a':'n')+'">'+(hon?'No login':'Quality Mentor')+'</span><small>Quality Pioneer'+(p.year?' '+scEsc(p.year):'')+' · '+scEsc(nfrPioSub(ref,u))+'</small></div></div>'
       +(p.citation?'<p class="nfr-cit">“'+scEsc(p.citation)+'”</p>':'<p class="nfr-muted">No citation yet.</p>')
-      +'<label class="nfr-sw"><input type="checkbox"'+(p.show!==false?' checked':'')+(p.citation?'':' disabled')+' onchange="nfrPioShow(\''+scJs(id)+'\',this.checked)"><i></i> Show citation on Verify page</label>'
+      +'<label class="nfr-sw"><input type="checkbox"'+(p.show!==false?' checked':'')+(p.citation?'':' disabled')+' onchange="nfrPioShow(\''+r+'\',this.checked)"><i></i> Show citation on Verify page</label>'
       +'<small class="nfr-muted">Given by '+scEsc(p.by||'HealSol')+(p.at?' on '+scEsc(scFmtDate(String(p.at).slice(0,10))):'')+'</small>'
-      +'<div class="nfr-pb"><button type="button" class="nfr-btn ghost sm" onclick="nfrPioForm(\''+scJs(id)+'\')"><i class="ti ti-pencil"></i> Edit</button><button type="button" class="nfr-btn ghost sm del" onclick="nfrPioRemove(\''+scJs(id)+'\')"><i class="ti ti-x"></i> Remove title</button></div></div>'; }).join('')+'</div>';
+      +'<div class="nfr-pb"><button type="button" class="nfr-btn ghost sm" onclick="nfrPioForm(\''+r+'\')"><i class="ti ti-pencil"></i> Edit</button>'
+      +'<button type="button" class="nfr-btn ghost sm" onclick="nfrPioCard(\''+r+'\')"><i class="ti ti-download"></i> Card</button>'
+      +'<button type="button" class="nfr-btn ghost sm" onclick="nfrPioLink(\''+r+'\')"><i class="ti ti-shield-check"></i> Verify link</button>'
+      +'<button type="button" class="nfr-btn ghost sm del" onclick="nfrPioRemove(\''+r+'\')"><i class="ti ti-x"></i> Remove title</button></div></div>'; }).join('')+'</div>';
   h+='<div class="nfr-row"><button type="button" class="nfr-btn ghost" id="nfr-upd" onclick="nfrUpdateNow()"><i class="ti ti-refresh"></i> Update cards now</button><small class="nfr-muted">Works out all levels and stars again (takes about a minute). Otherwise this happens tonight at 2 AM.</small></div></div>';
-  h+='<div class="nfr-card"><h3><i class="ti ti-clock"></i> History</h3>'+(log.length?'<div class="nfr-tw"><table class="nfr-t"><thead><tr><th>Date</th><th>Quality Mentor</th><th>Action</th><th>Details</th><th>By</th></tr></thead><tbody>'
+  h+='<div class="nfr-card"><h3><i class="ti ti-clock"></i> History</h3>'+(log.length?'<div class="nfr-tw"><table class="nfr-t"><thead><tr><th>Date</th><th>Person</th><th>Action</th><th>Details</th><th>By</th></tr></thead><tbody>'
     +log.slice(0,100).map(function(x){ var a={given:['Given','g'],edited:['Edited','n'],removed:['Removed','r']}[x.act]||[x.act||'',''];
-      return '<tr><td>'+scEsc(scFmtDate(String(x.at||'').slice(0,10)))+'</td><td>'+scEsc(x.who)+'</td><td><span class="nfr-chip '+a[1]+'">'+scEsc(a[0])+'</span></td><td>'+scEsc(x.act==='removed'?('Reason: '+(x.reason||'')):((x.year?x.year+' · ':'')+(x.citation||'')))+'</td><td>'+scEsc(x.by||'')+'</td></tr>'; }).join('')
+      return '<tr><td>'+scEsc(scFmtDate(String(x.at||'').slice(0,10)))+'</td><td>'+scEsc(x.who)+'<small>'+scEsc(x.kind)+'</small></td><td><span class="nfr-chip '+a[1]+'">'+scEsc(a[0])+'</span></td><td>'+scEsc(x.act==='removed'?('Reason: '+(x.reason||'')):((x.year?x.year+' · ':'')+(x.citation||'')))+'</td><td>'+scEsc(x.by||'')+'</td></tr>'; }).join('')
     +'</tbody></table></div>':'<div class="nfr-muted">Nothing yet.</div>')+'</div>';
   return h;
 }
-async function nfrPioForm(id){
-  var S=_scSupervisors||{}, y=new Date().getFullYear(), u=id?S[id]:null, p=nfrPio(u)||{};
-  var cand=Object.keys(S).filter(function(k){ return S[k]&&!S[k].disabled&&(!S[k].pioneer||k===id); }).sort(function(a,b){ return String(S[a].name||a).localeCompare(String(S[b].name||b)); });
-  if(!cand.length){ showToast('There are no Quality Mentors (Supervisors) to choose from.','err'); return; }
+function nfrFacOpts(st,sel){ var F=scMasterFacilities||{}, L=Object.keys(F).filter(function(c){ var f=F[c]; return f&&!f.migratedTo&&(!st||nfrStateCode(f.state)===st); })
+    .sort(function(a,b){ return String(F[a].name||a).localeCompare(String(F[b].name||b)); });
+  return L.length?L.map(function(c){ var f=F[c]; return '<label class="nfr-fc"><input type="checkbox" value="'+scEsc(c)+'"'+(sel[c]?' checked':'')+'> '+scEsc(f.name||c)+' <small>'+scEsc([f.district,f.state].filter(Boolean).join(', '))+'</small></label>'; }).join('')
+    :'<span class="nfr-muted">No facilities'+(st?' in this state':'')+'.</span>'; }
+function nfrPioKind(k){ _nfR.pk=k; var a=document.getElementById('nfr-pk-sup'), b=document.getElementById('nfr-pk-hon'); if(a) a.style.display=k==='sup'?'':'none'; if(b) b.style.display=k==='hon'?'':'none';
+  document.querySelectorAll('.nfr-kind label').forEach(function(l){ l.classList.toggle('on',l.getAttribute('data-k')===k); }); }
+function nfrHonFacs(){ var st=document.getElementById('nfr-hst'), box=document.getElementById('nfr-hfac'); if(!st||!box) return; var sel={}; box.querySelectorAll('input:checked').forEach(function(i){ sel[i.value]=1; });
+  if(!Object.keys(sel).length&&_nfR.hfac) sel=_nfR.hfac; _nfR.hfac=null; box.innerHTML=nfrFacOpts(st.value,sel); }
+async function nfrPioForm(ref){
+  var S=_scSupervisors||{}, y=new Date().getFullYear(), u=ref?nfrPioRec(ref):null, p=nfrPio(u)||{}, kind=ref?ref.slice(0,3):'';
+  var cand=Object.keys(S).filter(function(k){ return S[k]&&!S[k].disabled&&!S[k].pioneer; }).sort(function(a,b){ return String(S[a].name||a).localeCompare(String(S[b].name||b)); });
   var stAll={}; cand.forEach(function(k){ nfrSupStates(S[k]).forEach(function(s){ stAll[s]=1; }); });
+  var crit=String((_nfR.crit||{}).text||'').trim();
+  var hon=kind==='hon'?u:{}; _nfR.hfac=Object.assign({},(hon&&hon.facilities)||{});
+  var stOpts=(NF_STATE_LIST||[]).slice().sort(function(a,b){ return a[0].localeCompare(b[0]); }).map(function(s){ return '<option value="'+s[1]+'"'+(hon.st===s[1]?' selected':'')+'>'+scEsc(s[0])+'</option>'; }).join('');
   var ov=document.createElement('div'); ov.className='nfr-ov'; ov.id='nfr-ov';
-  ov.innerHTML='<form class="nfr-form" onsubmit="event.preventDefault();nfrPioSave(\''+scJs(id||'')+'\');"><div class="nfr-fh"><b>'+(id?'Edit Quality Pioneer':'Give Quality Pioneer title')+'</b><button type="button" onclick="nfrClose()" title="Close">✕</button></div>'
-    +(id?'<fieldset><legend>Quality Mentor</legend><b>'+scEsc(u.name||id)+'</b><input type="hidden" id="nfr-sup" value="'+scEsc(id)+'"></fieldset>'
-      :'<fieldset><legend>1 · Quality Mentor</legend><div class="nfr-2"><label>State<select id="nfr-pst" onchange="nfrPioList()"><option value="">All states</option>'+Object.keys(stAll).sort().map(function(s){ return '<option>'+scEsc(s)+'</option>'; }).join('')+'</select></label>'
-      +'<label>Search<input id="nfr-pq" placeholder="Name" oninput="nfrPioList()"></label></div><label>Quality Mentor<select id="nfr-sup" required size="5"></select></label></fieldset>')
-    +'<fieldset><legend>'+(id?'':'2 · ')+'Citation</legend><label>Year<select id="nfr-py">'+[y,y-1].map(function(v){ return '<option'+(String(p.year||y)===String(v)?' selected':'')+'>'+v+'</option>'; }).join('')+'</select></label>'
+  ov.innerHTML='<form class="nfr-form" onsubmit="event.preventDefault();nfrPioSave(\''+scJs(ref||'')+'\');"><div class="nfr-fh"><b>'+(ref?'Edit Quality Pioneer':'Give Quality Pioneer title')+'</b><button type="button" onclick="nfrClose()" title="Close">✕</button></div>'
+    +(ref?'':'<fieldset><legend>1 · Who</legend><div class="nfr-kind"><label data-k="sup"'+(cand.length?'':' class="dis"')+'><input type="radio" name="nfr-pk" value="sup"'+(cand.length?'':' disabled')+' onchange="nfrPioKind(\'sup\')"> <b>A Quality Mentor</b><small>'+(cand.length?'Has a Supervisor login':'Every Quality Mentor already has the title')+'</small></label>'
+      +'<label data-k="hon"><input type="radio" name="nfr-pk" value="hon" onchange="nfrPioKind(\'hon\')"> <b>Someone without a login</b><small>e.g. assessor, senior official, HealSol leader</small></label></div></fieldset>')
+    +((!ref&&cand.length)||kind==='sup'?'<fieldset id="nfr-pk-sup"><legend>Quality Mentor</legend>'+(kind==='sup'?'<b>'+scEsc(u.name||'')+'</b>'
+      :'<div class="nfr-2"><label>State<select id="nfr-pst" onchange="nfrPioList()"><option value="">All states</option>'+Object.keys(stAll).sort().map(function(s){ return '<option>'+scEsc(s)+'</option>'; }).join('')+'</select></label>'
+      +'<label>Search<input id="nfr-pq" placeholder="Name" oninput="nfrPioList()"></label></div><label>Quality Mentor<select id="nfr-sup" size="5"></select></label>')+'</fieldset>':'')
+    +(!ref||kind==='hon'?'<fieldset id="nfr-pk-hon"><legend>Person</legend><label>Full name<input id="nfr-hn" maxlength="60" placeholder="e.g. Dr. Manish Singh" value="'+scEsc(hon.name||'')+'"></label>'
+      +'<div class="nfr-2"><label>Designation<input id="nfr-hd" maxlength="60" placeholder="e.g. Founder &amp; Director" value="'+scEsc(hon.designation||'')+'"></label><label>Organisation <small>(optional)</small><input id="nfr-ho" maxlength="60" placeholder="e.g. HealSol Academy" value="'+scEsc(hon.org||'')+'"></label></div>'
+      +'<label>State<select id="nfr-hst" onchange="nfrHonFacs()"><option value="">Choose a state…</option>'+stOpts+'</select></label>'
+      +'<label>Facilities they helped <small>(optional; their card then shows facilities mentored, NQAS Ready and people covered)</small></label><div class="nfr-fbox" id="nfr-hfac"></div></fieldset>':'')
+    +'<fieldset><legend>'+(ref?'':'2 · ')+'Citation</legend><label>Year<select id="nfr-py">'+[y,y-1].map(function(v){ return '<option'+(String(p.year||y)===String(v)?' selected':'')+'>'+v+'</option>'; }).join('')+'</select></label>'
     +'<label>Citation <small>(one line, up to 160 letters)</small><textarea id="nfr-pc" maxlength="160" rows="2" placeholder="e.g. Mentored 25 sub-centres in Jhansi to NQAS Ready">'+scEsc(p.citation||'')+'</textarea></label>'
     +'<label class="nfr-sw"><input type="checkbox" id="nfr-pshow"'+(p.show!==false?' checked':'')+'><i></i> Show citation on the public Verify page</label></fieldset>'
-    +'<div class="nfr-err" id="nfr-err"></div><div class="nfr-fb"><button type="button" class="nfr-btn ghost" onclick="nfrClose()">Cancel</button><button type="submit" class="nfr-btn">'+(id?'Save changes':'Give title')+'</button></div></form>';
+    +(ref?'':'<fieldset><legend>3 · Criteria</legend>'+(crit?'<ol class="nfr-clist">'+crit.split('\n').map(function(x){ return x.replace(/^[\s•\-*\d.)]+/,'').trim(); }).filter(Boolean).map(function(x){ return '<li>'+scEsc(x)+'</li>'; }).join('')+'</ol>':'<p class="nfr-muted">No Pioneer criteria set yet. Set them on the Quality Pioneer tab first.</p>')
+      +'<label class="nfr-tick"><input type="checkbox" id="nfr-pok"'+(crit?'':' disabled')+'> I confirm this person meets the Quality Pioneer criteria set by HealSol.</label></fieldset>')
+    +'<div class="nfr-err" id="nfr-err"></div><div class="nfr-fb"><button type="button" class="nfr-btn ghost" onclick="nfrClose()">Cancel</button><button type="submit" class="nfr-btn">'+(ref?'Save changes':'Give title')+'</button></div></form>';
   ov.addEventListener('click',function(e){ if(e.target===ov) nfrClose(); });
-  document.body.appendChild(ov); _nfR.cand=cand; if(!id) nfrPioList();
+  document.body.appendChild(ov); _nfR.cand=cand;
+  if(!ref){ var k0=cand.length?'sup':'hon'; var rb=ov.querySelector('input[name=nfr-pk][value='+k0+']'); if(rb) rb.checked=true; nfrPioKind(k0); if(cand.length) nfrPioList(); }
+  else _nfR.pk=kind;
+  nfrHonFacs();
 }
 function nfrPioList(){ var S=_scSupervisors||{}, sel=document.getElementById('nfr-sup'); if(!sel||sel.tagName!=='SELECT') return; var st=document.getElementById('nfr-pst').value, q=document.getElementById('nfr-pq').value.trim().toLowerCase(), cur=sel.value;
   var L=(_nfR.cand||[]).filter(function(k){ var u=S[k]; return (!st||nfrSupStates(u).indexOf(st)>=0)&&(!q||String(u.name||k).toLowerCase().indexOf(q)>=0); });
   sel.innerHTML=L.map(function(k){ var u=S[k], lv=u.impact&&u.impact.level; return '<option value="'+scEsc(k)+'"'+(k===cur?' selected':'')+'>'+scEsc(u.name||k)+' · '+nfrFacN(u)+(nfrSupStates(u).length?' · '+scEsc(nfrSupStates(u).join(', ')):'')+(lv?' · '+scEsc(NF_LEVEL[lv].en):'')+'</option>'; }).join('')||'<option value="" disabled>No Quality Mentor matches</option>'; }
-async function nfrPioSave(editId){
-  var id=editId||document.getElementById('nfr-sup').value, err=document.getElementById('nfr-err'), S=_scSupervisors||{};
-  var c=document.getElementById('nfr-pc').value.trim().replace(/\s+/g,' '), y=document.getElementById('nfr-py').value, show=document.getElementById('nfr-pshow').checked;
-  if(!id||!S[id]){ err.textContent='Choose the Quality Mentor.'; return; } if(c.length<10){ err.textContent='Write a short citation (why this person is a Quality Pioneer).'; return; }
-  var by=nfrBy(), now=scNowIso(), old=nfrPio(S[id])||{}, p={year:y,citation:c,show:!!show,by:editId?(old.by||by):by,at:editId?(old.at||now):now};
-  if(editId){ p.updatedBy=by; p.updatedAt=now; }
-  var ok=await fbSet('sc_supervisors/'+id+'/pioneer',p); if(!ok){ err.textContent='Could not save.'; return; }
-  var lk='P'+Date.now().toString(36), le={act:editId?'edited':'given',year:y,citation:c,by:by,at:now}; await fbSet('sc_supervisors/'+id+'/pioneerLog/'+lk,le);
-  S[id].pioneer=p; S[id].pioneerLog=S[id].pioneerLog||{}; S[id].pioneerLog[lk]=le; nfrClose();
-  showToast(editId?'Saved.':(S[id].name||id)+' is now a Quality Pioneer. Shown from the next update.','ok'); nfrRender(); }
-async function nfrPioShow(id,on){ var S=_scSupervisors||{}; var ok=await fbSet('sc_supervisors/'+id+'/pioneer/show',!!on); if(ok&&S[id]&&typeof S[id].pioneer==='object') S[id].pioneer.show=!!on;
+async function nfrPioSave(editRef){
+  var err=document.getElementById('nfr-err'), g=function(i){ var e=document.getElementById(i); return e?String(e.value||'').trim():''; };
+  var kind=editRef?editRef.slice(0,3):(_nfR.pk||'sup'), ref=editRef, c=g('nfr-pc').replace(/\s+/g,' '), y=g('nfr-py'), show=document.getElementById('nfr-pshow').checked, hon=null;
+  if(kind==='sup'&&!ref){ var sid=g('nfr-sup'); if(!sid||!(_scSupervisors||{})[sid]){ err.textContent='Choose the Quality Mentor.'; return; } ref='sup:'+sid; }
+  if(kind==='hon'){ hon={name:g('nfr-hn'),designation:g('nfr-hd'),org:g('nfr-ho'),st:g('nfr-hst')}; var fs={}; document.querySelectorAll('#nfr-hfac input:checked').forEach(function(i){ fs[i.value]=true; }); hon.facilities=Object.keys(fs).length?fs:null;
+    if(hon.name.length<3){ err.textContent='Enter the person\'s full name.'; return; } if(!hon.designation){ err.textContent='Enter the designation.'; return; } if(!hon.st){ err.textContent='Choose the state.'; return; }
+    hon.state=nfrStateName(hon.st); if(!hon.org) hon.org=null; }
+  if(c.length<10){ err.textContent='Write a short citation (why this person is a Quality Pioneer).'; return; }
+  if(!editRef&&!(document.getElementById('nfr-pok')||{}).checked){ err.textContent=String((_nfR.crit||{}).text||'').trim()?'Confirm that the person meets the Pioneer criteria.':'Set the Pioneer criteria first (Quality Pioneer tab → Set criteria).'; return; }
+  var by=nfrBy(), now=scNowIso();
+  if(kind==='hon'&&!ref){ ref='hon:H'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36); }
+  var u=nfrPioRec(ref)||{}, old=nfrPio(u)||{}, p={year:y,citation:c,show:!!show,by:editRef?(old.by||by):by,at:editRef?(old.at||now):now}; if(editRef){ p.updatedBy=by; p.updatedAt=now; }
+  var base=nfrPioBase(ref), ok;
+  if(kind==='hon'){ var rec=Object.assign({},u,hon,{pioneer:p,removed:null,addedBy:u.addedBy||by,at:u.at||now}); delete rec.impact; ok=await fbSet(base,JSON.parse(JSON.stringify(rec)));
+    if(ok){ _nfR.hon=_nfR.hon||{}; _nfR.hon[ref.slice(4)]=rec; } }
+  else ok=await fbSet(base+'/pioneer',p);
+  if(!ok){ err.textContent='Could not save.'; return; }
+  var lk='P'+Date.now().toString(36), le={act:editRef?'edited':'given',year:y,citation:c,by:by,at:now}; await fbSet(base+'/pioneerLog/'+lk,le);
+  u=nfrPioRec(ref); u.pioneer=p; u.pioneerLog=u.pioneerLog||{}; u.pioneerLog[lk]=le; nfrClose();
+  showToast(editRef?'Saved.':(u.name||'')+' is now a Quality Pioneer. Tap "Update cards now" to make the card.','ok'); nfrRender(); }
+async function nfrPioShow(ref,on){ var u=nfrPioRec(ref); var ok=await fbSet(nfrPioBase(ref)+'/pioneer/show',!!on); if(ok&&u&&typeof u.pioneer==='object') u.pioneer.show=!!on;
   showToast(ok?(on?'Citation will show on the Verify page from the next update.':'Citation hidden from the Verify page from the next update.'):'Could not save.',ok?'ok':'err'); }
-async function nfrPioRemove(id){ var S=_scSupervisors||{}, u=S[id]; if(!u) return;
-  var v=await scDialog({title:'Remove Quality Pioneer title?',icon:'⚠️',okLabel:'Remove title',fields:[{key:'reason',label:'Reason (kept in history)',required:true,type:'textarea',placeholder:'e.g. Left the programme'}]}); if(!v) return;
-  var by=nfrBy(), now=scNowIso(), p=nfrPio(u)||{}, ok=await fbSet('sc_supervisors/'+id+'/pioneer',null); if(!ok){ showToast('Could not save.','err'); return; }
-  var lk='P'+Date.now().toString(36), le={act:'removed',year:p.year||'',reason:String(v.reason||'').trim(),by:by,at:now}; await fbSet('sc_supervisors/'+id+'/pioneerLog/'+lk,le);
-  delete u.pioneer; u.pioneerLog=u.pioneerLog||{}; u.pioneerLog[lk]=le; showToast('Title removed. They return to Quality Leader from the next update.','ok'); nfrRender(); }
+async function nfrPioRemove(ref){ var u=nfrPioRec(ref); if(!u) return; var hon=ref.slice(0,3)==='hon';
+  var v=await scDialog({title:'Remove Quality Pioneer title?',icon:'⚠️',okLabel:'Remove title',message:hon?'Their impact card and Verify link stop working from the next update. The record stays in History.':'They return to Quality Leader from the next update.',fields:[{key:'reason',label:'Reason (kept in history)',required:true,type:'textarea',placeholder:'e.g. Left the programme'}]}); if(!v) return;
+  var by=nfrBy(), now=scNowIso(), p=nfrPio(u)||{}, base=nfrPioBase(ref), ok=await fbSet(base+'/pioneer',null); if(!ok){ showToast('Could not save.','err'); return; }
+  if(hon) await fbSet(base+'/removed',true);
+  var lk='P'+Date.now().toString(36), le={act:'removed',year:p.year||'',reason:String(v.reason||'').trim(),by:by,at:now}; await fbSet(base+'/pioneerLog/'+lk,le);
+  delete u.pioneer; if(hon) u.removed=true; u.pioneerLog=u.pioneerLog||{}; u.pioneerLog[lk]=le; showToast(hon?'Title removed.':'Title removed. They return to Quality Leader from the next update.','ok'); nfrRender(); }
+async function nfrPioImpact(ref){ var r=null; try{ r=await fbGet('sc_impact/'+nfrPioKey(ref)); }catch(e){} if(!r||r.level!=='pioneer'||!r.publicId){ showToast('The card is made at the next update. Tap "Update cards now" first.','err'); return null; } await nfImpCfg(); return r; }
+async function nfrPioCard(ref){ var r=await nfrPioImpact(ref); if(!r) return; showToast('Making the card…','ok');
+  var c=await nfImpCanvas(r); if(!c){ showToast('Could not make the card on this device.','err'); return; }
+  var a=document.createElement('a'); a.href=c.toDataURL('image/jpeg',0.9); a.download='Quality-Pioneer-'+String(r.name||'card').replace(/[^A-Za-z0-9]+/g,'-')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
+async function nfrPioLink(ref){ var r=await nfrPioImpact(ref); if(!r) return; var url=nfImpVerifyUrl(r);
+  try{ await navigator.clipboard.writeText(url); showToast('Verify link copied: '+url,'ok'); }catch(e){ await scDialog({title:'Verify link',icon:'🔗',okLabel:'Done',message:url,fields:[]}); } }
 async function nfrUpdateNow(){ var b=document.getElementById('nfr-upd'); if(b){ b.disabled=true; b.innerHTML='<i class="ti ti-loader"></i> Updating…'; }
   try{ var r=await nfCall('refreshSummary',{all:true}); showToast('Cards updated for '+((r&&r.impact)||0)+' people.','ok'); }catch(e){ showToast(e.message||'Could not update.','err'); }
   if(b){ b.disabled=false; b.innerHTML='<i class="ti ti-refresh"></i> Update cards now'; } }
