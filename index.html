@@ -19570,7 +19570,7 @@ async function nfSumCfg(){ try{ var c=await fbGet('shared/sc_summary_config'); i
   var oL=scLoadMasterData;
   scLoadMasterData=async function(){
     _nfLight=false;
-    if(appMode==='sc-admin'){ try{ await nfSumCfg(); var meta=await fbGet('sc_summary/meta');
+    if(appMode==='sc-admin'){ try{ await nfSumCfg(); var meta=await fbGet('sc_summary/meta'); _nfSum.meta=meta||null;   // last run details: shown on the Programme & timeline card
       if(meta&&meta.at&&(+meta.count||0)>NF_SUM.lightAt&&(Date.now()-Date.parse(meta.at))<NF_SUM.freshHours*3600e3){ var m=await fbGet('sc_summary/fac'); if(m){ _nfSum={map:m,meta:meta}; _nfLight=true; } } }catch(e){} }
     return oL.apply(this,arguments); };
   var oG=fbGet; fbGet=function(p){ if(_nfLight&&p==='sc_progress') return Promise.resolve({}); return oG.apply(this,arguments); };   // light: no full card download
@@ -19600,7 +19600,7 @@ function nfSumWhen(){ var m=_nfSum.meta; if(!m||!m.at) return ''; try{ var d=new
 async function nfSumRefresh(code){
   if(appMode!=='sc-admin') return;
   showToast(code?'Updating the summary for '+code+'…':'Updating all summaries — this can take a few minutes…','');
-  try{ var r=await nfCall('refreshSummary',code?{code:code}:{all:true}); showToast('Summary updated: '+(r.computed||0)+' facilit'+((r.computed||0)===1?'y':'ies')+(r.errors&&r.errors.length?' · '+r.errors.length+' problem(s)':'')+'.','ok'); }
+  try{ var r=await nfCall('refreshSummary',code?{code:code}:{all:true}); try{ _nfSum.meta=await fbGet('sc_summary/meta'); if(typeof nfRenderOverview==='function') nfRenderOverview(); }catch(e){} showToast('Summary updated: '+(r.computed||0)+' facilit'+((r.computed||0)===1?'y':'ies')+(r.errors&&r.errors.length?' · '+r.errors.length+' problem(s)':'')+'.','ok'); }
   catch(e){ showToast(e.message||'Could not update the summary.','err'); }
 }
 (function(){
@@ -19608,7 +19608,9 @@ async function nfSumRefresh(code){
     var T, b='<button class="scx-btn sm ghost" onclick="nfSumRefresh(\''+scJs(st.code)+'\')">↻ Refresh summary</button>', T='<div class="nfg-btns">', i=h.lastIndexOf(T);
     return i>=0?h.slice(0,i+T.length)+b+h.slice(i+T.length):h.replace(/<\/div>$/,'<div class="nfg-btns">'+b+'</div></div>'); };
   var oC=nfgOvCardHTML; nfgOvCardHTML=function(rows){ var h=oC.apply(this,arguments); if(!h||appMode!=='sc-admin') return h;
-    var m=_nfSum.meta, note='<div class="nfg-note" style="padding:0 2px 6px;">'+(m&&m.at?'Nightly summary: '+scEsc(nfSumWhen())+' · ':'')+'<button type="button" class="nfo-link" onclick="nfSumRefresh()">↻ Refresh all summaries</button></div>';
+    var m=_nfSum.meta, err=m&&m.errors&&m.errors.length?' · <span style="color:var(--red-dk)">'+m.errors.length+' problem'+(m.errors.length===1?'':'s')+'</span>':'';
+    var note='<div class="nfg-note" style="padding:0 2px 6px;">'+(m&&m.at?'Nightly summary: '+scEsc(nfSumWhen())+(m.by&&m.by!=='schedule'?' (refreshed by '+scEsc(m.by)+')':'')+' · '+(+m.count||0)+' facilities'+err+'<br>':'Nightly summary: not run yet<br>')
+      +'<button type="button" class="nfo-link" onclick="nfSumRefresh()">↻ Refresh all summaries</button></div>';
     var i=h.indexOf('</div>',h.indexOf('class="nfo-ch"')); return i>=0?h.slice(0,i+6)+note+h.slice(i+6):h; };
 })();
 // ── card writes mark the facility for tonight's summary ──
