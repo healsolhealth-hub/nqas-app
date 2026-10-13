@@ -19618,5 +19618,226 @@ var _nfDirty={};
 (function(){ var oP=scProgressPath; scProgressPath=function(code){ try{ if(code&&appMode&&appMode!=='sc-admin'&&!_nfDirty[code]&&typeof db!=='undefined'&&db){ _nfDirty[code]=1; db.ref('sc_dirty/'+code).set(scTodayStr()).catch(function(){}); setTimeout(function(){ delete _nfDirty[code]; },3600000); } }catch(e){} return oP.apply(this,arguments); }; })();
 </script>
 
+<!-- ══ Step 3 of CQI: Social impact — levels, stars, shareable card with QR, Verify page, partner strip ══ -->
+<style id="nf-imp-css">
+.nfi-card{border-radius:20px;padding:16px;margin:12px 0;background:linear-gradient(135deg,#0F5F56,#134E4A);color:#fff;}
+.nfi-card .lv{font-size:12px;opacity:.85;font-weight:700;letter-spacing:.3px;} .nfi-card h3{margin:2px 0 4px;font-size:19px;} .nfi-st{color:#FBBF24;font-size:20px;letter-spacing:2px;}
+.nfi-st i{color:rgba(255,255,255,.28);font-style:normal;} .nfi-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;}
+.nfi-nums div{background:rgba(255,255,255,.12);border-radius:12px;padding:8px 4px;text-align:center;} .nfi-nums b{display:block;font-size:20px;} .nfi-nums small{font-size:10.5px;opacity:.9;}
+.nfi-care{font-size:13px;font-weight:600;margin:6px 0;} .nfi-next{font-size:11.5px;opacity:.85;}
+.nfi-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;} .nfi-btns button{border:0;border-radius:12px;padding:10px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.nfi-btns .wa{background:#25D366;color:#fff;} .nfi-btns .sv{background:rgba(255,255,255,.16);color:#fff;} .nfi-name{font-size:11.5px;margin-top:8px;opacity:.9;}
+.nfi-name label{margin-right:10px;cursor:pointer;} .nfi-tag{font-size:12px;color:#B45309;margin-left:4px;white-space:nowrap;} .nfi-empty{font-size:13px;opacity:.92;line-height:1.5;}
+.nfi-ov{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:100001;display:flex;align-items:center;justify-content:center;padding:16px;}
+.nfi-ov > div{background:#fff;border-radius:22px;max-width:380px;width:100%;padding:22px;text-align:center;} .nfi-ov h2{margin:6px 0;font-size:20px;color:#0F172A;}
+.nfi-ov .nfi-st{font-size:30px;} .nfi-ov .nfi-st i{color:#E5E7EB;} .nfi-ov p{color:#475569;font-size:13.5px;} .nfi-ov .nfi-btns{justify-content:center;}
+.nfi-ov .nfi-btns .sv{background:#F1F5F9;color:#0F172A;}
+.nfi-set{background:#fff;border:1px solid var(--br,#E2E8F0);border-radius:16px;padding:16px 18px;margin:0 0 14px;} .nfi-set h3{margin:0 0 6px;font-size:15px;}
+.nfi-set .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0;font-size:12.5px;} .nfi-set img{height:28px;border-radius:4px;border:1px solid #E5E7EB;}
+.nfi-set .warn{font-size:11.5px;color:#92400E;background:#FFFBEB;border-radius:8px;padding:6px 9px;margin:6px 0;}
+#nf-verify .nfi-v{max-width:420px;margin:16px auto;background:#fff;border-radius:18px;padding:18px;border:1px solid #E2E8F0;font-family:inherit;}
+#nf-verify .nfi-v h2{margin:4px 0;font-size:20px;} #nf-verify .nfi-v .nfi-st{font-size:24px;} #nf-verify .nfi-v .nfi-st i{color:#E5E7EB;}
+</style>
+<script id="nf-imp">
+// ══════════════════════════════════════════════════════════════
+// SOCIAL IMPACT (levels and stars are worked out on the server every night — functions/impact.js)
+//  sc_impact/{mob or supervisor id}: {level, stars, pts, nextAt, nums, pop, facilities, hist, publicId}
+//  Card: a 1080×1350 picture made on the phone (canvas) — name, level, stars, 3 numbers, "Ensuring quality of care
+//  for N people", QR (Verify page ?impact=ID) and the partner strip (shared/sc_impact_partners, set by HealSol).
+// ══════════════════════════════════════════════════════════════
+var NF_LEVEL={starter:{en:'Quality Starter',hi:'क्वालिटी स्टार्टर',ic:'🌱'},achiever:{en:'Quality Achiever',hi:'क्वालिटी अचीवर',ic:'🏅'},
+  practitioner:{en:'Quality Practitioner',hi:'क्वालिटी प्रैक्टिशनर',ic:'🤝'},leader:{en:'Quality Leader',hi:'क्वालिटी लीडर',ic:'🧭'},pioneer:{en:'Quality Pioneer',hi:'क्वालिटी पायनियर',ic:'🌟'}};
+var NF_IMP_VERIFY=(typeof NF_CERT_VERIFY_BASE!=='undefined'&&NF_CERT_VERIFY_BASE)||'https://www.thehealsol.com/nqas-fast-sc-certificate';   // same Verify page as certificates (Wix page that shows this app)
+var _nfImp={rec:null,key:'',at:0,cfg:null,partners:null};
+function nfImpHi(){ return typeof _appLang!=='undefined'&&_appLang==='hi'; }
+function nfImpLv(l){ var x=NF_LEVEL[l]; return x?(nfImpHi()?x.hi:x.en):''; }
+function nfImpStars(n,plain){ if(!n) return ''; var s='★★★★★'.slice(0,n), e='★★★★★'.slice(n); return plain?s+'☆☆☆☆☆'.slice(0,5-n):'<span class="nfi-st">'+s+'<i>'+e+'</i></span>'; }
+function nfImpTagHTML(t){ if(!t||!t.level) return ''; return ' <span class="nfi-tag" title="'+scEsc(nfImpLv(t.level))+'">'+(t.stars?'★'.repeat(t.stars):NF_LEVEL[t.level].ic)+'</span>'; }
+function nfImpSlug(x){ return String(x||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+async function nfImpCfg(){ if(_nfImp.cfg&&_nfImp.partners) return; try{ _nfImp.cfg=await fbGet('shared/sc_impact_config')||{}; _nfImp.partners=await fbGet('shared/sc_impact_partners')||{}; }catch(e){ _nfImp.cfg=_nfImp.cfg||{}; _nfImp.partners=_nfImp.partners||{}; } }
+async function nfImpLoad(key,force){ if(!key) return null; if(!force&&_nfImp.key===key&&Date.now()-_nfImp.at<120000) return _nfImp.rec;
+  var r=null; try{ r=await fbGet('sc_impact/'+key); }catch(e){} _nfImp={rec:r,key:key,at:Date.now(),cfg:_nfImp.cfg,partners:_nfImp.partners}; return r; }
+function nfImpVerifyUrl(rec){ var b=(_nfImp.cfg&&_nfImp.cfg.verifyBase)||NF_IMP_VERIFY; return b+(b.indexOf('?')>=0?'&':'?')+'cert=IMP-'+encodeURIComponent(rec.publicId||''); }   // carried in ?cert= so the certificate page passes it on
+function nfImpMain(rec){ return (rec.facilities||[])[0]||{}; }
+function nfImpReady(rec){ return (rec.facilities||[]).some(function(f){ return f.result==='ready'||f.cert; }); }
+function nfImpCare(rec,villages){ var hi=nfImpHi(), n=rec.pop||0; if(!n) return '';
+  var many=(rec.facilities||[]).length>1, num=Number(n).toLocaleString('en-IN'), ok=nfImpReady(rec);
+  if(hi) return (many?(rec.facilities.length+' केंद्रों के '):(villages?villages+' गाँवों के ':''))+num+' लोगों के लिए गुणवत्तापूर्ण देखभाल सुनिश्चित'+(ok?'':' करने की ओर');
+  return (ok?'Ensuring':'Working to ensure')+' quality of care for '+num+' people'+(many?' across '+rec.facilities.length+' facilities':(villages?' · '+villages+' villages':''));
+}
+function nfImpNums(rec){ var hi=nfImpHi(), n=rec.nums||{};
+  if(rec.kind==='staff') return [[n.fixed||0,hi?'कमियाँ सुधारीं':'items fixed'],[n.onTime||0,hi?'कार्ड समय पर':'cards on time'],['+'+(n.gain||0),hi?'अंक सुधार':'points better']];
+  if(rec.kind==='champion') return [[n.facilities||0,hi?'केंद्रों की मदद':'facilities helped'],[n.verified||0,hi?'आइटम जाँचे':'items checked'],[n.ready||0,hi?'NQAS तैयार':'NQAS Ready']];
+  return [[n.facilities||0,hi?'केंद्रों का मार्गदर्शन':'facilities mentored'],[n.ready||0,hi?'NQAS तैयार':'NQAS Ready'],['+'+(n.gain||0),hi?'औसत सुधार':'average gain']];
+}
+function nfImpNameChoice(){ try{ return localStorage.getItem('nfi_name')||'full'; }catch(e){ return 'full'; } }
+function nfImpShownName(rec){ var n=String(rec.name||'').trim(); if(nfImpNameChoice()!=='first') return n; return n.split(/\s+/)[0]; }
+function nfImpVillages(rec){ try{ if(rec.kind==='staff'&&(rec.facilities||[]).length===1){ var f=(typeof choState!=='undefined'&&choState.facility&&choState.facilityCode===rec.facilities[0].code)?choState.facility:null; return f&&f.population&&f.population.villages||null; } }catch(e){} return null; }
+// ── the card (picture) ──
+function nfImpLoadImg(src){ return new Promise(function(res){ if(!src) return res(null); var i=new Image(); i.onload=function(){ res(i); }; i.onerror=function(){ res(null); }; i.src=src; }); }
+function nfImpPartnersFor(rec){ var P=_nfImp.partners||{}, m=nfImpMain(rec), ds=nfImpSlug(m.state)+'__'+nfImpSlug(m.district);
+  var L=((P.district||{})[ds])||((P.state||{})[nfImpSlug(m.state)])||[]; if(!Array.isArray(L)) L=Object.keys(L).map(function(k){ return L[k]; }); return L.filter(function(x){ return x&&x.img&&x.on!==false; }).slice(0,2); }
+async function nfImpCanvas(rec){
+  await nfImpCfg(); var hi=nfImpHi(), W=1080, H=1350, c=document.createElement('canvas'); c.width=W; c.height=H; var g=c.getContext('2d'); if(!g) return null;
+  var F='"Poppins","Noto Sans Devanagari","Mangal",sans-serif';
+  var grd=g.createLinearGradient(0,0,W,H); grd.addColorStop(0,'#0F5F56'); grd.addColorStop(1,'#134E4A'); g.fillStyle=grd; g.fillRect(0,0,W,H);
+  g.fillStyle='#fff'; g.fillRect(0,0,W,150);
+  var l1=await nfImpLoadImg(SC_BRAND.logoNqas), l2=await nfImpLoadImg(SC_BRAND.logoHealsol);
+  if(l1) g.drawImage(l1,50,35,80*l1.width/l1.height,80); if(l2) g.drawImage(l2,W-50-60*l2.width/l2.height,45,60*l2.width/l2.height,60);
+  g.textAlign='center'; g.fillStyle='#fff';
+  var lv=NF_LEVEL[rec.level]||{}; g.font='600 40px '+F; g.fillStyle='#A7F3D0'; g.fillText((hi?'सामाजिक प्रभाव':'SOCIAL IMPACT')+' · NQAS | FAST',W/2,230);
+  g.font='700 76px '+F; g.fillStyle='#fff'; var nm=nfImpShownName(rec); while(g.measureText(nm).width>W-120&&nm.length>4) nm=nm.slice(0,-1); g.fillText(nm,W/2,330);
+  g.font='600 44px '+F; g.fillStyle='#E2E8F0'; g.fillText((rec.role||'')+(nfImpMain(rec).name&&!nfImpHideFac(rec)&&(rec.facilities||[]).length===1?' · '+nfImpMain(rec).name:''),W/2,395);
+  g.font='700 58px '+F; g.fillStyle='#FDE68A'; g.fillText((lv.ic||'')+' '+nfImpLv(rec.level),W/2,500);
+  if(rec.stars){ g.font='700 92px '+F; var s='★★★★★'.slice(0,rec.stars), e='★★★★★'.slice(rec.stars), ws=g.measureText(s).width, we=g.measureText(e).width, x0=W/2-(ws+we)/2; g.textAlign='left'; g.fillStyle='#FBBF24'; g.fillText(s,x0,610); g.fillStyle='rgba(255,255,255,.25)'; g.fillText(e,x0+ws,610); g.textAlign='center'; }
+  var N=nfImpNums(rec), bw=300, gap=30, bx=(W-3*bw-2*gap)/2, by=670;
+  N.forEach(function(x,i){ var X=bx+i*(bw+gap); g.fillStyle='rgba(255,255,255,.12)'; nfImpRound(g,X,by,bw,190,28); g.fill(); g.fillStyle='#fff'; g.font='700 80px '+F; g.fillText(String(x[0]),X+bw/2,by+105); g.font='500 34px '+F; g.fillStyle='#CCFBF1'; g.fillText(x[1],X+bw/2,by+160); });
+  var care=nfImpCare(rec,nfImpVillages(rec)); if(care){ g.font='600 40px '+F; g.fillStyle='#fff'; nfImpWrap(g,care,W/2,950,W-140,52); }
+  // QR + verify note
+  var url=nfImpVerifyUrl(rec), qy=1035, qs=170; try{ var q=qrcode(0,'M'); q.addData(url); q.make(); var n=q.getModuleCount(), cell=qs/n; g.fillStyle='#fff'; nfImpRound(g,60,qy,qs+24,qs+24,14); g.fill(); g.fillStyle='#0F172A';
+    for(var r=0;r<n;r++) for(var k=0;k<n;k++) if(q.isDark(r,k)) g.fillRect(72+k*cell,qy+12+r*cell,Math.ceil(cell),Math.ceil(cell)); }catch(e){}
+  g.textAlign='left'; g.font='600 32px '+F; g.fillStyle='#fff'; g.fillText(hi?'स्कैन करें — असली कार्ड की जाँच':'Scan to verify this card',270,qy+60);
+  g.font='400 28px '+F; g.fillStyle='#CCFBF1'; g.fillText((hi?'अपडेट ':'Updated ')+scFmtDate(String(rec.updatedAt||scNowIso()).slice(0,10))+' · HealSol Academy',270,qy+105);
+  // partner strip
+  var PL=nfImpPartnersFor(rec); g.fillStyle='#fff'; g.fillRect(0,H-120,W,120); g.fillStyle='#475569'; g.font='500 28px '+F;
+  if(PL.length){ g.fillText(hi?'सहयोग से':'In partnership with',50,H-50); var x=330; for(var i=0;i<PL.length;i++){ var im=await nfImpLoadImg(PL[i].img); if(im){ var w=70*im.width/im.height; g.drawImage(im,x,H-95,Math.min(w,300),70); x+=Math.min(w,300)+40; } } }
+  else { g.fillText('NQAS | FAST · '+(hi?'हेल्सोल अकादमी द्वारा':'by HealSol Academy'),50,H-50); }
+  g.textAlign='center'; return c;
+}
+function nfImpHideFac(rec){ var m=nfImpMain(rec), h=(_nfImp.cfg&&_nfImp.cfg.hideFacility)||{}; return !!h[nfImpSlug(m.state)]; }
+function nfImpRound(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function nfImpWrap(g,t,x,y,max,lh){ var w=t.split(' '), line='', yy=y; w.forEach(function(word){ var test=line?line+' '+word:word; if(g.measureText(test).width>max&&line){ g.fillText(line,x,yy); line=word; yy+=lh; } else line=test; }); if(line) g.fillText(line,x,yy); }
+async function nfImpBlob(rec){ var c=await nfImpCanvas(rec); if(!c) return null; return await new Promise(function(r){ try{ c.toBlob(function(b){ r(b); },'image/jpeg',0.86); }catch(e){ r(null); } }); }
+function nfImpText(rec){ var hi=nfImpHi(); return (hi?'मेरा NQAS सफ़र: ':'My NQAS journey: ')+nfImpLv(rec.level)+(rec.stars?' '+nfImpStars(rec.stars,true):'')+'. '+(nfImpCare(rec,nfImpVillages(rec))||'')+' '+(hi?'जाँचें: ':'Verify: ')+nfImpVerifyUrl(rec); }
+async function nfImpShare(btn){
+  var rec=_nfImp.rec; if(!rec) return; var old=btn&&btn.innerHTML; if(btn){ btn.disabled=true; btn.textContent='…'; }
+  try{ var b=await nfImpBlob(rec), text=nfImpText(rec);
+    if(b&&navigator.canShare){ var file=new File([b],'nqas-impact.jpg',{type:'image/jpeg'}); if(navigator.canShare({files:[file]})){ await navigator.share({files:[file],text:text}); return; } }
+    if(b) nfImpDownload(b); window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener');
+  }catch(e){ if(!(e&&e.name==='AbortError')) showToast(nfImpHi()?'साझा नहीं हो सका।':'Could not share.','err'); }
+  finally{ if(btn){ btn.disabled=false; btn.innerHTML=old; } }
+}
+function nfImpDownload(b){ var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='nqas-impact.jpg'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500); }
+async function nfImpSave(btn){ var rec=_nfImp.rec; if(!rec) return; var b=await nfImpBlob(rec); if(b) nfImpDownload(b); else showToast('Could not make the picture.','err'); }
+function nfImpSetName(v){ try{ localStorage.setItem('nfi_name',v); }catch(e){} }
+// ── the "My impact" block ──
+function nfImpCardHTML(rec,who){
+  var hi=nfImpHi();
+  if(!rec||!rec.level){ var msg=who==='staff'?(hi?'7 दिन की बेसलाइन पूरी करें और <b>🌱 क्वालिटी स्टार्टर</b> बनें। आपका प्रभाव हर रात अपडेट होता है।':'Complete your 7 baseline days to become a <b>🌱 Quality Starter</b>. Your impact is updated every night.')
+      :(hi?'आपका प्रभाव हर रात अपडेट होता है — कल फिर देखें।':'Your impact is updated every night — check again tomorrow.');
+    return '<div class="nfi-card" id="nfi-card"><div class="lv">'+scEsc(hi?'मेरा प्रभाव':'MY IMPACT')+'</div><div class="nfi-empty">'+msg+'</div></div>'; }
+  var lv=NF_LEVEL[rec.level]||{}, N=nfImpNums(rec), care=nfImpCare(rec,nfImpVillages(rec)), nm=nfImpNameChoice();
+  var next=rec.stars&&rec.stars<5&&rec.nextAt!=null&&rec.pts!=null?(hi?'अगला ★ '+Math.max(1,rec.nextAt-rec.pts)+' अंक और':'Next ★ in '+Math.max(1,rec.nextAt-rec.pts)+' more points'):'';
+  return '<div class="nfi-card" id="nfi-card"><div class="lv">'+scEsc(hi?'मेरा प्रभाव':'MY IMPACT')+'</div><h3>'+(lv.ic||'')+' '+scEsc(nfImpLv(rec.level))+'</h3>'+nfImpStars(rec.stars)
+    +'<div class="nfi-nums">'+N.map(function(x){ return '<div><b>'+scEsc(String(x[0]))+'</b><small>'+scEsc(x[1])+'</small></div>'; }).join('')+'</div>'
+    +(care?'<div class="nfi-care">'+scEsc(care)+'</div>':'')+(next?'<div class="nfi-next">'+scEsc(next)+'</div>':'')
+    +'<div class="nfi-btns"><button type="button" class="wa" onclick="nfImpShare(this)">'+scEsc(hi?'WhatsApp पर साझा करें':'Share on WhatsApp')+'</button><button type="button" class="sv" onclick="nfImpSave(this)">'+scEsc(hi?'तस्वीर सहेजें':'Save picture')+'</button></div>'
+    +'<div class="nfi-name">'+scEsc(hi?'कार्ड पर नाम:':'Name on card:')+' <label><input type="radio" name="nfi-nm" '+(nm!=='first'?'checked':'')+' onchange="nfImpSetName(\'full\')"> '+scEsc(hi?'पूरा नाम':'Full name')+'</label><label><input type="radio" name="nfi-nm" '+(nm==='first'?'checked':'')+' onchange="nfImpSetName(\'first\')"> '+scEsc(hi?'केवल पहला नाम':'First name only')+'</label></div></div>';
+}
+// level up / new star → one celebration screen (once)
+function nfImpCelebrate(rec){
+  if(!rec||!rec.level) return; var k='nfi_seen_'+rec.key, now=rec.level+':'+(rec.stars||0), seen=''; try{ seen=localStorage.getItem(k)||''; }catch(e){}
+  if(seen===now) return; try{ localStorage.setItem(k,now); }catch(e){}
+  var hi=nfImpHi(), lv=NF_LEVEL[rec.level]||{}, newLevel=!seen||seen.split(':')[0]!==rec.level;
+  var ov=document.createElement('div'); ov.className='nfi-ov';
+  ov.innerHTML='<div><div style="font-size:44px">🎉</div><h2>'+scEsc(newLevel?(hi?'बधाई! अब आप '+nfImpLv(rec.level)+' हैं':'You are now a '+nfImpLv(rec.level)):(hi?'नया सितारा!':'A new star!'))+'</h2>'+nfImpStars(rec.stars)
+    +'<p>'+scEsc(nfImpCare(rec,nfImpVillages(rec))||'')+'</p><div class="nfi-btns"><button type="button" class="wa" onclick="nfImpShare(this)">'+scEsc(hi?'WhatsApp पर साझा करें':'Share on WhatsApp')+'</button><button type="button" class="sv" onclick="this.closest(\'.nfi-ov\').remove()">'+scEsc(hi?'बाद में':'Later')+'</button></div></div>';
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); }); document.body.appendChild(ov);
+}
+// staff: Me page + stars next to the name on Home
+(function(){
+  if(typeof nfRenderMe==='function'){ var oMe=nfRenderMe; nfRenderMe=function(){ var r=oMe.apply(this,arguments);
+    try{ var p=document.getElementById('nf-me'); if(!p) return r; var draw=function(rec){ var old=document.getElementById('nfi-card'); if(old) old.remove(); var prof=p.querySelector('.nf-prof'); var h=nfImpCardHTML(rec,'staff'); if(prof) prof.insertAdjacentHTML('afterend',h); else p.insertAdjacentHTML('afterbegin',h); };
+      draw(_nfImp.key===choState.staffMobile?_nfImp.rec:null); Promise.all([nfImpCfg(),nfImpLoad(choState.staffMobile)]).then(function(a){ draw(a[1]); }); }catch(e){ console.warn('[SC] impact card',e); }
+    return r; }; }
+  if(typeof nfRenderToday==='function'){ var oT=nfRenderToday; nfRenderToday=function(){ var r=oT.apply(this,arguments);
+    try{ var put=function(tag){ var h=document.querySelector('#nf-today .nf-top h1'); if(h&&tag&&tag.level&&!h.querySelector('.nfi-tag')) h.insertAdjacentHTML('beforeend',nfImpTagHTML(tag)); };
+      put(((((choState.facility||{}).staff||{})[choState.staffMobile])||{}).impact||(_nfImp.key===choState.staffMobile?_nfImp.rec:null));
+      if(!_nfImp.celebrated&&choState.staffMobile){ _nfImp.celebrated=true; Promise.all([nfImpCfg(),nfImpLoad(choState.staffMobile)]).then(function(a){ put(a[1]); nfImpCelebrate(a[1]); }); } }catch(e){}
+    return r; }; }
+})();
+// Champion / Supervisor (Mentor): "My impact" on their Overview; District / MOIC: none
+function nfImpMyKey(){ if(appMode==='sc-champion'&&typeof _scq!=='undefined'&&_scq.me) return {key:_scq.me.id,who:'champion'};
+  if(appMode==='sc-supervisor'&&!(typeof scIsDistrict==='function'&&scIsDistrict())&&typeof _scSup!=='undefined'&&_scSup) return {key:_scSup.id,who:'mentor'}; return null; }
+(function(){ if(typeof nfOverviewHTML!=='function') return; var oO=nfOverviewHTML;
+  nfOverviewHTML=function(rows,opts){ var me=nfImpMyKey(); if(me){ var rec=_nfImp.key===me.key?_nfImp.rec:null;
+      opts=Object.assign({},opts,{extraSide:'<div class="nfo-card" id="nfi-side">'+nfImpCardHTML(rec,me.who)+'</div>'+((opts&&opts.extraSide)||'')});
+      if(!rec&&!_nfImp.loading){ _nfImp.loading=true; Promise.all([nfImpCfg(),nfImpLoad(me.key)]).then(function(a){ _nfImp.loading=false; var s=document.getElementById('nfi-side'); if(s) s.innerHTML=nfImpCardHTML(a[1],me.who); if(a[1]) nfImpCelebrate(a[1]); }); } }
+    return oO.call(this,rows,opts); }; })();
+(function(){ if(typeof scqRenderChampionApp!=='function') return; var oA=scqRenderChampionApp;
+  scqRenderChampionApp=function(){ var r=oA.apply(this,arguments);
+    try{ var app=document.getElementById('scq-app'); var me=nfImpMyKey(); if(!app||!me||document.getElementById('nfi-scq')) return r; var main=app.querySelector('.scq-main')||app;
+      var d=document.createElement('div'); d.id='nfi-scq'; d.innerHTML=nfImpCardHTML(_nfImp.key===me.key?_nfImp.rec:null,'champion'); main.insertBefore(d,main.firstChild);
+      Promise.all([nfImpCfg(),nfImpLoad(me.key)]).then(function(a){ var x=document.getElementById('nfi-scq'); if(x) x.innerHTML=nfImpCardHTML(a[1],'champion'); }); }catch(e){}
+    return r; }; })();
+// stars on the facility staff list (drill-in)
+(function(){ var oD=scDrillIn; scDrillIn=async function(code){ var r=await oD.apply(this,arguments);
+  try{ var f=(scMasterFacilities||{})[code]||{}, sc=document.getElementById('sc-drill-staff'); if(sc) sc.querySelectorAll('[data-mob]').forEach(function(row){ var t=((f.staff||{})[row.getAttribute('data-mob')]||{}).impact; var nm=row.querySelector('div[style*="font-weight:800"]'); if(t&&nm&&!nm.querySelector('.nfi-tag')) nm.insertAdjacentHTML('beforeend',nfImpTagHTML(t)); }); }catch(e){}
+  return r; }; })();
+// ── public Verify page: <app>?impact=ID ──
+async function nfImpVerifyBoot(){
+  var id=''; try{ var q=new URLSearchParams(location.search), c=(q.get('cert')||'').trim(); id=(q.get('impact')||'').trim()||(/^IMP-/i.test(c)?c.slice(4):''); id=id.toLowerCase(); }catch(e){} if(!id) return false;
+  var pg=document.createElement('div'); pg.id='nf-verify'; pg.innerHTML='<div class="nfv-top"><img src="'+SC_BRAND.logoNqas+'" alt="NQAS"><img src="'+SC_BRAND.logoHealsol+'" alt="HealSol Academy"></div><div class="nfv-st" style="background:#fff;">Checking…</div>'; document.body.appendChild(pg);
+  var rec=null; if(/^[a-z0-9]{6,20}$/.test(id)){ try{ if(typeof db==='undefined'||!db) initFirebase(); }catch(e){} for(var i=0;i<50&&(typeof db==='undefined'||!db);i++) await new Promise(function(r){ setTimeout(r,100); }); rec=await fbGet('sc_impact_public/'+id); }
+  var lv=rec?NF_LEVEL[rec.level]||{}:{};
+  pg.innerHTML='<div class="nfv-top"><img src="'+SC_BRAND.logoNqas+'" alt="NQAS"><img src="'+SC_BRAND.logoHealsol+'" alt="HealSol Academy"></div>'
+    +(rec?'<div class="nfv-st ok"><i class="ti ti-shield-check"></i><div><b>Genuine NQAS | FAST impact card</b><small>Worked out by HealSol Academy from verified programme data · updated '+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</small></div></div>'
+      +'<div class="nfi-v"><div style="color:#64748B;font-size:12px;font-weight:700;">'+scEsc((rec.role||'').toUpperCase())+'</div><h2>'+scEsc(rec.name)+'</h2><div style="font-weight:700;color:#0F766E;font-size:16px;">'+(lv.ic||'')+' '+scEsc(lv.en||'')+'</div>'+nfImpStars(rec.stars)
+      +'<p style="font-size:13.5px;color:#334155;">'+scEsc([rec.facility,rec.district,rec.state].filter(Boolean).join(' · '))+(rec.facilities>1?' · '+rec.facilities+' facilities':'')+'</p>'
+      +(rec.pop?'<p style="font-size:13.5px;"><b>'+scEsc((rec.cert||rec.result==='ready'?'Ensuring':'Working to ensure')+' quality of care for '+Number(rec.pop).toLocaleString('en-IN')+' people')+'</b></p>':'')+'</div>'
+      :'<div class="nfv-st no"><i class="ti ti-alert-triangle"></i><div><b>Card not found</b><small>This impact card could not be found. Ask the person to share it again from the app.</small></div></div>')
+    +'<div class="nfv-foot">NQAS | FAST · by HealSol Academy · <a href="'+scEsc(NF_APP_HOME)+'" target="_blank" rel="noopener">Learn about NQAS | FAST</a></div>';
+  return true;
+}
+(function(){ if(typeof nfVerifyBoot==='function'){ var oV=nfVerifyBoot; nfVerifyBoot=function(){ try{ if(/^IMP-/i.test((new URLSearchParams(location.search).get('cert')||'').trim())) return Promise.resolve(false); }catch(e){} return oV.apply(this,arguments); }; } })();
+(function(){ var go=function(){ nfImpVerifyBoot(); }; if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else setTimeout(go,0); })();
+// ── HealSol Setup: impact cards (partner logos, facility name per state, Quality Pioneer) ──
+async function nfImpEnsureSetup(){
+  if(appMode!=='sc-admin') return; var main=document.querySelector('#admin-app .admin-main'); if(!main||document.getElementById('nfi-set')) return;
+  var c=document.createElement('div'); c.id='nfi-set'; c.className='nfi-set'; c.dataset.nfv='setup'; main.appendChild(c); await nfImpCfg(); nfImpSetupRender();
+}
+function nfImpStates(){ var o={}; Object.keys(scMasterFacilities||{}).forEach(function(k){ var f=scMasterFacilities[k]; if(f&&f.state) o[f.state]=1; }); return Object.keys(o).sort(); }
+function nfImpDistricts(){ var o={}; Object.keys(scMasterFacilities||{}).forEach(function(k){ var f=scMasterFacilities[k]; if(f&&f.state&&f.district) o[f.state+'|'+f.district]=1; }); return Object.keys(o).sort(); }
+function nfImpSetupRender(){
+  var c=document.getElementById('nfi-set'); if(!c) return; var P=_nfImp.partners||{}, cfg=_nfImp.cfg||{}, hide=cfg.hideFacility||{};
+  var list=function(lv,key,label){ var L=((P[lv]||{})[key])||[]; return '<div class="row"><b>'+scEsc(label)+'</b>'+L.map(function(x,i){ return '<span>'+(x.img?'<img src="'+x.img+'" alt="">':'')+' '+scEsc(x.name||'')+' <button class="scx-btn sm ghost" onclick="nfImpPartnerDel(\''+lv+'\',\''+scJs(key)+'\','+i+')">Remove</button></span>'; }).join('')
+    +(L.length<2?'<button class="scx-btn sm ghost" onclick="nfImpPartnerAdd(\''+lv+'\',\''+scJs(key)+'\',\''+scJs(label)+'\')">＋ Add logo</button>':'')+'</div>'; };
+  var sups=_scSupervisors||{};
+  c.innerHTML='<h3>⭐ Impact cards</h3><p style="font-size:12.5px;color:#64748B;margin:0 0 6px;">Levels and stars are worked out every night. Partner logos appear in the strip at the bottom of every card (district logos first, else the state\'s). Up to 2 each.</p>'
+    +'<div class="warn">Use a government or partner logo only with their written permission. Do not use the national emblem.</div>'
+    +nfImpStates().map(function(s){ return list('state',nfImpSlug(s),s)+'<div class="row" style="margin-left:12px;"><label><input type="checkbox" '+(hide[nfImpSlug(s)]?'checked':'')+' onchange="nfImpHideSet(\''+scJs(nfImpSlug(s))+'\',this.checked)"> Hide facility names on cards in '+scEsc(s)+'</label></div>'; }).join('')
+    +nfImpDistricts().map(function(k){ var p=k.split('|'); return list('district',nfImpSlug(p[0])+'__'+nfImpSlug(p[1]),p[1]+' ('+p[0]+')'); }).join('')
+    +'<h3 style="margin-top:12px;">🌟 Quality Pioneer</h3><p style="font-size:12.5px;color:#64748B;margin:0 0 6px;">Given by HealSol to exceptional Quality Leaders (Mentors). Shown from the next nightly update.</p>'
+    +Object.keys(sups).sort().map(function(id){ var u=sups[id]||{}; return '<div class="row"><label><input type="checkbox" '+(u.pioneer?'checked':'')+' onchange="nfImpPioneer(\''+scJs(id)+'\',this.checked)"> '+scEsc(u.name||id)+'</label>'+(u.impact&&u.impact.level?'<small style="color:#64748B;">'+scEsc(NF_LEVEL[u.impact.level].en)+'</small>':'')+'</div>'; }).join('');
+}
+async function nfImpPartnerAdd(lv,key,label){
+  var inp=document.createElement('input'); inp.type='file'; inp.accept='image/png,image/jpeg';
+  inp.onchange=async function(){ var f=inp.files&&inp.files[0]; if(!f) return; if(f.size>300000){ showToast('Use a logo under 300 KB.','err'); return; }
+    var data=await nfImpShrink(f); var v=await scDialog({title:'Partner logo — '+label,icon:'🤝',okLabel:'Add',fields:[{key:'name',label:'Partner name',required:true,placeholder:'e.g. NHM Uttar Pradesh'},{key:'ok',type:'checklist',value:[],options:[{value:'1',label:'We have the partner\'s written permission to use this logo'}]}],
+      validate:function(v){ return (v.ok||[]).length?null:'Tick the permission box.'; }}); if(!v) return;
+    var P=_nfImp.partners=_nfImp.partners||{}; P[lv]=P[lv]||{}; var L=P[lv][key]||[]; L.push({name:v.name.trim(),img:data,on:true,at:scNowIso()}); P[lv][key]=L.slice(0,2);
+    var ok=await fbSet('shared/sc_impact_partners',P); showToast(ok?'Logo added.':'Could not save.',ok?'ok':'err'); nfImpSetupRender(); };
+  inp.click();
+}
+function nfImpShrink(file){ return new Promise(function(res){ var fr=new FileReader(); fr.onload=function(){ var im=new Image(); im.onload=function(){ var h=120, w=Math.round(im.width*h/im.height), c=document.createElement('canvas'); c.width=w; c.height=h; var g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,w,h); g.drawImage(im,0,0,w,h); res(c.toDataURL('image/png')); }; im.onerror=function(){ res(fr.result); }; im.src=fr.result; }; fr.readAsDataURL(file); }); }
+async function nfImpPartnerDel(lv,key,i){ var P=_nfImp.partners||{}; if(!P[lv]||!P[lv][key]) return; P[lv][key].splice(i,1); var ok=await fbSet('shared/sc_impact_partners',P); showToast(ok?'Removed.':'Could not save.',ok?'ok':'err'); nfImpSetupRender(); }
+async function nfImpHideSet(slug,on){ var cfg=_nfImp.cfg=_nfImp.cfg||{}; cfg.hideFacility=cfg.hideFacility||{}; if(on) cfg.hideFacility[slug]=true; else delete cfg.hideFacility[slug]; var ok=await fbSet('shared/sc_impact_config',cfg); showToast(ok?'Saved.':'Could not save.',ok?'ok':'err'); }
+async function nfImpPioneer(id,on){ var ok=await fbSet('sc_supervisors/'+id+'/pioneer',on?true:null); if(ok&&_scSupervisors[id]) _scSupervisors[id].pioneer=on||undefined; showToast(ok?(on?'Quality Pioneer — shown from the next nightly update.':'Pioneer removed.'):'Could not save.',ok?'ok':'err'); }
+(function(){ if(typeof nfAdminApply!=='function') return; var o=nfAdminApply; nfAdminApply=function(){ try{ nfImpEnsureSetup(); }catch(e){} return o.apply(this,arguments); }; })();
+// the nightly summary carries each person's contribution (used by functions/impact.js)
+(function(){ var oS=nfSumFacility; nfSumFacility=function(st){ var s=oS.apply(this,arguments);
+  try{ var P=st.progress||{}, S=st.staff||{}, pid=st.progId, present=scRolesFromRoster(S), A=st.agg, comp=nfgComp(st), imp={staff:{},rev:{}};
+    (A.staff||[]).forEach(function(x){ if(!x.inRoster) return; var m=x.mob, any=false, bl=true;
+      for(var di=0;di<7;di++){ var d=scDayDef(pid,di); if(!d||!(d.cps||[]).some(function(cp){ return scCpForRoleIn(cp,x.role,present); })) continue; any=true; if(!(((P[m]||{})['day_'+di])||{}).taskDone) bl=false; }
+      var fixed=0, L=(x.res&&x.res.latest)||{}; Object.keys(L).forEach(function(id){ var o=L[id]; if(o&&o.base!=null&&o.base<2&&o.score===2) fixed++; });
+      var pc=comp.people.find(function(q){ return q.mob===m; })||{}; imp.staff[m]={baseline:any&&bl,onTime:pc.on||0,fixed:fixed,name:x.name}; });
+    var R=function(id){ return imp.rev[id]=imp.rev[id]||{cards:0,n:0,ch:0}; };
+    Object.keys(P).forEach(function(m){ Object.keys(P[m]||{}).forEach(function(k){ var r=P[m][k]||{}; if(r.verified&&r.verifiedByMob&&/^[A-Za-z0-9_-]+$/.test(r.verifiedByMob)) R(r.verifiedByMob).cards++;
+      Object.keys(r.blRev||{}).forEach(function(ck){ Object.keys(r.blRev[ck]||{}).forEach(function(kk){ var e=r.blRev[ck][kk]; if(!e||!e.byId||!/^[A-Za-z0-9_-]+$/.test(e.byId)) return; var x=R(e.byId); x.n++; if(e.r&&e.r!=='ok') x.ch++; }); }); }); });
+    s.imp=scClean(imp);
+  }catch(e){ console.warn('[SC] impact in summary',e); }
+  return s; }; })();
+</script>
+
 </body>
 </html>
