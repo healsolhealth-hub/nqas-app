@@ -19675,7 +19675,7 @@ body.nf-admin:not(.nfv-recog) .admin-main > [data-nfv="recog"]{display:none!impo
 .nfr-form legend span{font-size:10.5px;background:#FEE2E2;color:#991B1B;border-radius:999px;padding:1px 7px;margin-left:6px;letter-spacing:0;text-transform:none;}
 .nfr-form label{display:block;font-size:13px;font-weight:600;color:#334155;margin:0 0 10px;} .nfr-form label small{font-weight:400;color:#64748B;}
 .nfr-form input:not([type=checkbox]):not([type=file]),.nfr-form select,.nfr-form textarea{display:block;width:100%;box-sizing:border-box;margin-top:4px;font:inherit;font-size:14px;font-weight:400;border:1.5px solid #CBD5E1;border-radius:10px;padding:9px 11px;background:#fff;color:#0F172A;}
-.nfr-form select[size]{padding:4px;} .nfr-form select:disabled{background:#F8FAFC;color:#94A3B8;}
+.nfr-form select[size]{padding:4px;} .nfr-form select[size] option{padding:8px 10px;border-radius:8px;margin:2px 0;} .nfr-form select[size] option:checked{background:var(--teal-dk,#135A55) linear-gradient(0deg,var(--teal-dk,#135A55),var(--teal-dk,#135A55));color:#fff;font-weight:600;} .nfr-form select:disabled{background:#F8FAFC;color:#94A3B8;}
 .nfr-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .nfr-tick{display:flex!important;gap:8px;align-items:flex-start;font-weight:500!important;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:10px;} .nfr-tick input{margin-top:3px;}
 .nfr-logo{display:flex;flex-wrap:wrap;gap:10px;align-items:center;} .nfr-logo small{flex-basis:100%;font-size:11.5px;color:#64748B;} .nfr-logo label.nfr-btn{margin:0;color:#0F172A;}
@@ -20130,11 +20130,12 @@ function nfrTitleForm(T,ref){
 function nfrPioForm(ref){ return nfrTitleForm('pioneer',ref); }
 function nfrPioList(){ var S=_scSupervisors||{}, sel=document.getElementById('nfr-sup'); if(!sel||sel.tagName!=='SELECT') return; var st=document.getElementById('nfr-pst').value, q=document.getElementById('nfr-pq').value.trim().toLowerCase(), cur=sel.value;
   var L=(_nfR.cand||[]).filter(function(k){ var u=S[k]; return (!st||nfrSupStates(u).indexOf(st)>=0)&&(!q||String(u.name||k).toLowerCase().indexOf(q)>=0); });
-  sel.innerHTML=L.map(function(k){ var u=S[k], lv=u.impact&&u.impact.level; return '<option value="'+scEsc(k)+'"'+(k===cur?' selected':'')+'>'+scEsc(u.name||k)+' · '+nfrFacN(u)+(nfrSupStates(u).length?' · '+scEsc(nfrSupStates(u).join(', ')):'')+(lv&&NF_LEVEL[lv]?' · '+scEsc(NF_LEVEL[lv].en):'')+'</option>'; }).join('')||'<option value="" disabled>No Quality Mentor matches</option>'; }
+  sel.innerHTML=L.map(function(k){ var u=S[k], lv=u.impact&&u.impact.level; return '<option value="'+scEsc(k)+'"'+(k===cur?' selected':'')+'>'+scEsc(u.name||k)+' · '+nfrFacN(u)+(nfrSupStates(u).length?' · '+scEsc(nfrSupStates(u).join(', ')):'')+(lv&&NF_LEVEL[lv]?' · '+scEsc(NF_LEVEL[lv].en):'')+'</option>'; }).join('')||'<option value="" disabled>No Quality Mentor matches</option>';
+  if(!sel.value&&L.length) sel.value=L[0]; }   // a name is always chosen (the first one) so the form never says "Choose the Quality Mentor" by surprise
 async function nfrTitleSave(T,editRef){
   var D=NF_TITLE[T], err=document.getElementById('nfr-err'), g=function(i){ var e=document.getElementById(i); return e?String(e.value||'').trim():''; };
   var kind=editRef?editRef.slice(0,3):(D.hon?(_nfR.pk||'sup'):'sup'), ref=editRef, hon=null, p={};
-  if(kind==='sup'&&!ref){ var sid=g('nfr-sup'); if(!sid||!(_scSupervisors||{})[sid]){ err.textContent='Choose the Quality Mentor.'; return; } ref='sup:'+sid; }
+  if(kind==='sup'&&!ref){ var sid=g('nfr-sup'); if(!sid||!(_scSupervisors||{})[sid]){ err.textContent='Tap a name in the Quality Mentor list.'; return; } ref='sup:'+sid; }
   if(kind==='hon'){ hon={name:g('nfr-hn'),designation:g('nfr-hd'),org:g('nfr-ho'),st:g('nfr-hst')}; var fs={}; document.querySelectorAll('#nfr-hfac input:checked').forEach(function(i){ fs[i.value]=true; }); hon.facilities=Object.keys(fs).length?fs:null;
     if(hon.name.length<3){ err.textContent='Enter the person\'s full name.'; return; } if(!hon.designation){ err.textContent='Enter the designation.'; return; } if(!hon.st){ err.textContent='Choose the state.'; return; }
     hon.state=nfrStateName(hon.st); if(!hon.org) hon.org=null; }
