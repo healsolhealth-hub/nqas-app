@@ -19741,7 +19741,7 @@ function nfImpTagHTML(t){ if(!t||!t.level) return ''; return ' <span class="nfi-
 function nfImpSlug(x){ return String(x||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
 async function nfImpCfg(){ if(_nfImp.cfg&&_nfImp.partners) return; try{ _nfImp.cfg=await fbGet('shared/sc_impact_config')||{}; _nfImp.partners=await fbGet('shared/sc_impact_partners')||{}; }catch(e){ _nfImp.cfg=_nfImp.cfg||{}; _nfImp.partners=_nfImp.partners||{}; } }
 async function nfImpLoad(key,force){ if(!key) return null; if(!force&&_nfImp.key===key&&Date.now()-_nfImp.at<120000) return _nfImp.rec;
-  var r=null; try{ r=await fbGet('sc_impact/'+key); }catch(e){} _nfImp={rec:r,key:key,at:Date.now(),cfg:_nfImp.cfg,partners:_nfImp.partners,logos:_nfImp.logos}; return r; }
+  var r=null; try{ r=await fbGet('sc_impact/'+key); }catch(e){} _nfImp={rec:r,key:key,at:Date.now(),cfg:_nfImp.cfg,partners:_nfImp.partners,logos:_nfImp.logos}; if(r&&r.level) nfImpPrepare(r); return r; }
 function nfImpVerifyUrl(rec){ var b=(_nfImp.cfg&&_nfImp.cfg.verifyBase)||NF_IMP_VERIFY; return b+(b.indexOf('?')>=0?'&':'?')+'cert=IMP-'+encodeURIComponent(rec.publicId||''); }   // carried in ?cert= so the certificate page passes it on
 function nfImpMain(rec){ return (rec.facilities||[])[0]||{}; }
 function nfImpReady(rec){ return (rec.facilities||[]).some(function(f){ return f.result==='ready'||f.cert; }); }
@@ -19837,41 +19837,43 @@ function nfImpCopy(t){ try{ if(navigator.clipboard&&window.isSecureContext) navi
 var NF_CARD_BASE='https://asia-south1-healsol-nqas.cloudfunctions.net/card';
 function nfImpCardBase(){ return (_nfImp.cfg&&_nfImp.cfg.cardBase)||NF_CARD_BASE; }
 function nfImpCardUrl(rec,extra){ return nfImpCardBase()+'?id='+encodeURIComponent(rec.publicId||'')+(nfImpHi()?'&l=hi':'')+(extra||''); }
+var _nfImpUrl={};   // key → card page address once the picture is on the server
 async function nfImpPublish(rec){
   await nfImpCfg(); if(!rec||!rec.publicId||!rec.key) return null;
   var sig=[rec.level,rec.stars,rec.updatedAt,rec.name,nfImpNameChoice(),nfImpHi()?'hi':'en',rec.citation||'',rec.showNums?1:0].join('|'), lk='nfi_pub_'+rec.key, done='';
   try{ done=localStorage.getItem(lk)||''; }catch(e){}
-  if(done===sig) return nfImpCardUrl(rec);
-  var c=await nfImpCanvas(rec); if(!c) return null; var d=c.toDataURL('image/jpeg',0.8).split(',')[1]; if(!d) return null;
-  var ok=await fbSet('sc_impact_img/'+rec.key,{d:d,at:scNowIso(),sig:sig}); if(!ok) return null;
-  try{ localStorage.setItem(lk,sig); }catch(e){}
-  return nfImpCardUrl(rec); }
+  if(done!==sig){
+    var c=await nfImpCanvas(rec); if(!c) return null; var d=c.toDataURL('image/jpeg',0.78).split(',')[1]; if(!d) return null;
+    var ok=await fbSet('sc_impact_img/'+rec.key,{d:d,at:scNowIso(),sig:sig}); if(!ok) return null;
+    try{ localStorage.setItem(lk,sig); }catch(e){}
+  }
+  return (_nfImpUrl[rec.key+'|'+sig]=nfImpCardUrl(rec)); }
+function nfImpReadyUrl(rec){ var sig=[rec.level,rec.stars,rec.updatedAt,rec.name,nfImpNameChoice(),nfImpHi()?'hi':'en',rec.citation||'',rec.showNums?1:0].join('|'); return _nfImpUrl[rec.key+'|'+sig]||null; }
+// prepare the picture in the background while "My impact" is on screen, so a tap opens the browser at once
+function nfImpPrepare(rec){ if(!rec||!rec.publicId||nfImpReadyUrl(rec)||_nfImp.preparing) return; _nfImp.preparing=true;
+  setTimeout(function(){ nfImpPublish(rec).catch(function(){}).then(function(){ _nfImp.preparing=false; }); },1200); }
+// open in the phone's browser — a real link tap, never replacing the app page
+function nfImpOpen(url){ var a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(function(){ a.remove(); },500); }
 function nfImpBusy(btn,on,old){ if(!btn) return old; if(on){ var o=btn.innerHTML; btn.disabled=true; btn.textContent=nfImpHi()?'तैयार हो रहा है…':'Preparing…'; return o; } btn.disabled=false; btn.innerHTML=old; }
-function nfImpOpen(url){ var w=null; try{ w=window.open(url,'_blank','noopener'); }catch(e){} if(w) return; try{ window.top.location.href=url; return; }catch(e){} try{ window.parent.postMessage({nfOpen:url},'*'); }catch(e){} try{ location.href=url; }catch(e){} }
-async function nfImpShare(btn){
-  var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
-  try{ var url=await nfImpPublish(rec), text=nfImpText(rec,url||null);
-    try{ if(navigator.canShare&&!nfImpEmbedded()){ var b=await nfImpBlob(rec); if(b){ var file=new File([b],'nqas-fast-card.jpg',{type:'image/jpeg'}); if(navigator.canShare({files:[file]})){ await navigator.share({files:[file],text:text}); return; } } } }catch(e){ if(e&&e.name==='AbortError') return; }
-    nfImpOpen('https://wa.me/?text='+encodeURIComponent(text));
-  }catch(e){ showToast(nfImpHi()?'साझा नहीं हो सका।':'Could not share.','err'); }
-  finally{ nfImpBusy(btn,false,old); } }
-async function nfImpLinkedIn(btn){ var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
-  try{ var url=await nfImpPublish(rec); if(!url){ showToast(nfImpHi()?'कार्ड तैयार नहीं हो सका।':'Could not prepare the card.','err'); return; }
-    nfImpCopy(nfImpCaption(rec,false)); showToast(nfImpHi()?'कैप्शन कॉपी हो गया — LinkedIn में पेस्ट करें।':'Caption copied — paste it in LinkedIn.','ok');
-    nfImpOpen('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url)); }
-  finally{ nfImpBusy(btn,false,old); } }
-async function nfImpInstagram(btn){ var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
-  try{ var url=await nfImpPublish(rec); if(!url){ showToast(nfImpHi()?'कार्ड तैयार नहीं हो सका।':'Could not prepare the card.','err'); return; }
-    nfImpCopy(nfImpCaption(rec,true)); showToast(nfImpHi()?'कैप्शन कॉपी हो गया। खुले पेज पर "तस्वीर साझा करें" दबाएँ और Instagram चुनें।':'Caption copied. On the page that opens, tap "Share picture" and choose Instagram.','ok');
-    nfImpOpen(nfImpCardUrl(rec,'&ig=1')); }
-  finally{ nfImpBusy(btn,false,old); } }
 function nfImpEmbedded(){ try{ return window.self!==window.top; }catch(e){ return true; } }
-async function nfImpSave(btn){ var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
-  try{ var touch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
-    if(!touch&&!nfImpEmbedded()){ var b=await nfImpBlob(rec); if(b){ nfImpDownload(b); return; } }
-    var url=await nfImpPublish(rec); if(url){ nfImpOpen(url+'&img=1&dl=1'); return; }
-    var b2=await nfImpBlob(rec); if(b2) nfImpDownload(b2); else showToast('Could not make the picture.','err'); }
-  finally{ nfImpBusy(btn,false,old); } }
+// kind: wa | ig | li | save
+async function nfImpGo(kind,btn){
+  var rec=_nfImp.rec; if(!rec) return; var hi=nfImpHi();
+  var target=function(url){ return kind==='li'?'https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url):kind==='save'?url+'&img=1&dl=1':url+'&own=1&'+(kind==='ig'?'ig=1':'wa=1'); };
+  var tell=function(){ if(kind==='save') return; nfImpCopy(nfImpCaption(rec,kind==='ig'));
+    showToast(kind==='li'?(hi?'कैप्शन कॉपी हो गया — LinkedIn में पेस्ट करें।':'Caption copied — paste it in LinkedIn.'):(hi?'खुले पेज पर "तस्वीर साझा करें" दबाएँ और '+(kind==='ig'?'Instagram':'WhatsApp')+' चुनें।':'On the page that opens, tap "Share picture" and choose '+(kind==='ig'?'Instagram':'WhatsApp')+'.'),'ok'); };
+  if(kind==='save'&&!(('ontouchstart' in window)||navigator.maxTouchPoints>0)&&!nfImpEmbedded()){ var bl=await nfImpBlob(rec); if(bl){ nfImpDownload(bl); return; } }
+  var ready=nfImpReadyUrl(rec); if(ready){ tell(); nfImpOpen(target(ready)); return; }
+  var old=nfImpBusy(btn,true), url=null; try{ url=await nfImpPublish(rec); }catch(e){} nfImpBusy(btn,false,old);
+  if(!url){ showToast(hi?'कार्ड तैयार नहीं हो सका — इंटरनेट जाँचें।':'Could not prepare the card — check the internet.','err'); return; }
+  // the upload took a moment: ask for one more tap so the phone opens the browser (and never reloads the app)
+  var ov=document.createElement('div'); ov.className='nfi-ov';
+  ov.innerHTML='<div><div style="font-size:40px">✅</div><h2>'+scEsc(hi?'आपका कार्ड तैयार है':'Your card is ready')+'</h2><div class="nfi-btns"><button type="button" class="wa" id="nfi-go">'+scEsc(hi?'कार्ड खोलें':'Open card')+'</button><button type="button" class="sv" onclick="this.closest(\'.nfi-ov\').remove()">'+scEsc(hi?'बाद में':'Later')+'</button></div></div>';
+  document.body.appendChild(ov); ov.querySelector('#nfi-go').onclick=function(){ tell(); nfImpOpen(target(url)); ov.remove(); }; }
+function nfImpShare(btn){ return nfImpGo('wa',btn); }
+function nfImpInstagram(btn){ return nfImpGo('ig',btn); }
+function nfImpLinkedIn(btn){ return nfImpGo('li',btn); }
+function nfImpSave(btn){ return nfImpGo('save',btn); }
 function nfImpDownload(b){ var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='nqas-fast-card.jpg'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500); }
 function nfImpBtnsHTML(rec){ var hi=nfImpHi();
   return '<div class="nfi-btns"><button type="button" class="wa" onclick="nfImpShare(this)">WhatsApp</button>'
