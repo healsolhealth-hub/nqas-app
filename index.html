@@ -16282,7 +16282,7 @@ async function nfVerifyBoot(){
     +(rec?'<div class="nfv-st ok"><i class="ti ti-shield-check"></i><div><b>Genuine certificate</b><small>Issued by HealSol Academy on '+scEsc(nfCertDate(rec.issuedAt))+' to '+scEsc(rec.name)+' — '+scEsc(rec.grade)+', facility score '+rec.facPct+'%. Certificate No. '+scEsc(rec.certId)+'.</small></div></div>'
       +'<div class="nfv-c">'+nfCertHTML(rec)+'</div>'
       :'<div class="nfv-st no"><i class="ti ti-alert-triangle"></i><div><b>Certificate not found</b><small>No NQAS | FAST certificate has the number “'+scEsc(id)+'”. Check the number, or contact HealSol Academy.</small></div></div>')
-    +'<div class="nfv-foot">NQAS | FAST · by HealSol Academy · <a href="'+scEsc(home)+'" target="_blank" rel="noopener">Open NQAS | FAST</a></div>';
+    +'<div class="nfv-foot">NQAS | FAST · by HealSol Academy · <a href="'+scEsc(home)+'" target="_blank" rel="noopener" onclick="return nfOpenOut(this.href)">Open NQAS | FAST</a></div>';
   return true;
 }
 // ── HealSol Setup: who signs for HealSol Academy ──
@@ -19703,6 +19703,7 @@ body.nf-admin:not(.nfv-recog) .admin-main > [data-nfv="recog"]{display:none!impo
 #nf-verify .nfi-v .nfi-ok{background:#DCFCE7;color:#14532D;font-weight:700;font-size:14px;padding:9px 12px;display:flex;align-items:center;justify-content:center;gap:6px;}
 #nf-verify .nfi-v .nfi-ok i.ti{font-size:20px;} #nf-verify .nfi-v > div:not(.nfi-ok),#nf-verify .nfi-v h2,#nf-verify .nfi-v p{padding:0 14px;}
 #nf-verify .nfi-v .nfi-cit{font-size:13.5px;font-style:italic;color:#92400E;background:#FFFBEB;border-radius:10px;margin:8px 14px 0;padding:8px 10px;}
+#nf-verify .nfv-cta{display:block;margin:12px auto 0;max-width:420px;background:#135A55;color:#fff!important;text-decoration:none;border-radius:12px;padding:12px;font-weight:700;font-size:14px;}
 #nf-verify .nfi-v .nfi-upd{font-size:11.5px;color:#64748B;margin:6px 0 0;}
 #nf-verify.nfi-vp{-webkit-overflow-scrolling:touch;} #nf-verify.nfi-vp .nfv-top{padding:8px 14px;} #nf-verify.nfi-vp .nfv-top img{height:24px;} #nf-verify.nfi-vp .nfv-top img+img{height:15px;}
 #nf-verify.nfi-vp .nfv-foot{margin:8px 0 14px;}
@@ -19807,7 +19808,7 @@ function nfImpWhy(rec){ var w=rec&&rec.why, hi=nfImpHi(); if(!w) return '';
   if(w.k==='pts') return hi?'कार्यक्रम के 100 में से '+(w.v||0)+' अंक':(w.v||0)+' of 100 programme points';
   if(w.k==='ready') return w.v!=null?(hi?'NQAS तैयार स्कोर '+w.v+'%':'NQAS Ready score '+w.v+'%'):(hi?'NQAS तैयार':'NQAS Ready');
   if(w.k==='nhsrc') return w.v!=null?(hi?'NHSRC स्कोर '+w.v+'%':'NHSRC score '+w.v+'%'):(hi?'NHSRC प्रमाणित':'NHSRC certified');
-  if(w.k==='sup') return hi?w.v+' केंद्रों को सहयोग':'Supported '+w.v+' facilit'+(w.v===1?'y':'ies');
+  if(w.k==='sup') return !w.v?(hi?'अभी 0 केंद्र — कार्यक्रम बंद होने पर केंद्र गिना जाता है':'0 facilities yet — a facility counts when its programme closes'):(hi?w.v+' केंद्रों को सहयोग':'Supported '+w.v+' facilit'+(w.v===1?'y':'ies'));
   return ''; }
 function nfImpHowRows(level){ var hi=nfImpHi();
   if(level==='starter') return {t:hi?'स्टार्टर के सितारे':'Starter stars',p:hi?'अंक (100 में से): समय पर कार्यान्वयन कार्ड (दिन 8–49) 50 + अपनी बेसलाइन की कमियाँ सुधारीं 30 + पुनरावृत्ति / एंड-लाइन कार्ड (दिन 50–56) 20।':'Points out of 100: implementation cards on time (Days 8–49) 50 + your own baseline gaps fixed 30 + revision / end-line cards (Days 50–56) 20.',
@@ -19846,7 +19847,7 @@ async function nfImpPublish(rec){
   try{ localStorage.setItem(lk,sig); }catch(e){}
   return nfImpCardUrl(rec); }
 function nfImpBusy(btn,on,old){ if(!btn) return old; if(on){ var o=btn.innerHTML; btn.disabled=true; btn.textContent=nfImpHi()?'तैयार हो रहा है…':'Preparing…'; return o; } btn.disabled=false; btn.innerHTML=old; }
-function nfImpOpen(url){ var w=null; try{ w=window.open(url,'_blank','noopener'); }catch(e){} if(!w){ try{ (window.top||window).location.href=url; }catch(e){ location.href=url; } } }
+function nfImpOpen(url){ var w=null; try{ w=window.open(url,'_blank','noopener'); }catch(e){} if(w) return; try{ window.top.location.href=url; return; }catch(e){} try{ window.parent.postMessage({nfOpen:url},'*'); }catch(e){} try{ location.href=url; }catch(e){} }
 async function nfImpShare(btn){
   var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
   try{ var url=await nfImpPublish(rec), text=nfImpText(rec,url||null);
@@ -19888,7 +19889,7 @@ function nfImpCardHTML(rec,who){
   var lv=NF_LEVEL[rec.level]||{}, nn=nfImpNoNums(rec), N=nn?[]:nfImpNums(rec), care=nn?'':nfImpCare(rec,nfImpVillages(rec)), nm=nfImpNameChoice();
   var how=nfImpHowRows(rec.level), why=nfImpWhy(rec);
   var stars=rec.stars||how?(how?'<button type="button" class="nfi-starbtn" onclick="nfImpHow()" aria-label="'+scEsc(hi?'सितारे कैसे मिलते हैं':'How stars work')+'">'+(nfImpStars(rec.stars)||'<span class="nfi-st"><i>★★★★★</i></span>')+'<small>'+scEsc(hi?'कैसे?':'How?')+'</small></button>':nfImpStars(rec.stars)):'';
-  var prog=rec.kind==='champion'&&(rec.progress||[]).length?'<div class="nfi-prog"><b>'+scEsc(hi?'चल रहे कार्यक्रम (80% कार्ड जाँचने हैं)':'Programmes running (check 80% of cards)')+'</b>'+rec.progress.map(function(x){ return scEsc(x.name)+' — '+x.pct+'%'+(x.close?(hi?' · बंद ':' · closes ')+scEsc(scFmtDate(x.close)):''); }).join('<br>')+'</div>':'';
+  var prog=rec.kind==='champion'&&(rec.progress||[]).length?'<div class="nfi-prog"><b>'+scEsc(hi?'चल रहे कार्यक्रम (80% कार्ड जाँचने हैं)':'Programmes running (check 80% of cards)')+'</b>'+rec.progress.map(function(x){ return scEsc(x.name)+' — '+(x.done!=null?(hi?x.done+' में से '+(x.chk||0)+' कार्ड ':(x.chk||0)+' of '+x.done+' cards '):'')+'('+x.pct+'%)'+(x.close?(hi?' · बंद ':' · closes ')+scEsc(scFmtDate(x.close)):''); }).join('<br>')+'</div>':'';
   var upd='<div class="nfi-upd2">'+scEsc(hi?'हर रात अपडेट होता है · पिछला अपडेट ':'Updated every night · last update ')+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</div>';
   return '<div class="nfi-card" id="nfi-card"><div class="lv">'+scEsc(hi?'मेरा प्रभाव':'MY IMPACT')+'</div><h3>'+(lv.ic||'')+' '+scEsc(nfImpLv(rec.level))+'</h3>'+stars+(why?'<div class="nfi-why">'+scEsc(why)+'</div>':'')
     +(nn&&rec.citation?'<div class="nfi-care">“'+scEsc(rec.citation)+'”</div>':'')+(nn?'':'<div class="nfi-nums">'+N.map(function(x){ return '<div><b>'+scEsc(typeof x[0]==='number'?x[0].toLocaleString('en-IN'):String(x[0]))+'</b><small>'+scEsc(x[1])+'</small></div>'; }).join('')+'</div>')
@@ -19938,6 +19939,10 @@ function nfImpMyKey(){ if(appMode==='sc-champion'&&typeof _scq!=='undefined'&&_s
   try{ var f=(scMasterFacilities||{})[code]||{}, sc=document.getElementById('sc-drill-staff'); if(sc) sc.querySelectorAll('[data-mob]').forEach(function(row){ var t=((f.staff||{})[row.getAttribute('data-mob')]||{}).impact; var nm=row.querySelector('div[style*="font-weight:800"]'); if(t&&nm&&!nm.querySelector('.nfi-tag')) nm.insertAdjacentHTML('beforeend',nfImpTagHTML(t)); }); }catch(e){}
   return r; }; })();
 // ── public Verify page: <app>?impact=ID ──
+// open a link from inside the website's embedded page: new tab → whole page → ask the website page (Wix) to open it
+function nfOpenOut(url){ var w=null; try{ w=window.open(url,'_blank','noopener'); }catch(e){} if(w) return false;
+  try{ window.top.location.href=url; return false; }catch(e){}
+  try{ window.parent.postMessage({nfOpen:url},'*'); }catch(e){} return false; }
 async function nfImpVerifyBoot(){
   var id=''; try{ var q=new URLSearchParams(location.search), c=(q.get('cert')||'').trim(); id=(q.get('impact')||'').trim()||(/^IMP-/i.test(c)?c.slice(4):''); id=id.toLowerCase(); }catch(e){} if(!id) return false;
   var pg=document.createElement('div'); pg.id='nf-verify'; pg.innerHTML='<div class="nfv-top"><img src="'+SC_BRAND.logoNqas+'" alt="NQAS"><img src="'+SC_BRAND.logoHealsol+'" alt="HealSol Academy"></div><div class="nfv-st" style="background:#fff;">Checking…</div>'; document.body.appendChild(pg);
@@ -19951,7 +19956,7 @@ async function nfImpVerifyBoot(){
       +(rec.pop?'<p style="font-size:13.5px;margin:6px 0;"><b>'+scEsc((rec.cert||rec.result==='ready'?'Ensuring':'Working to ensure')+' quality of care for '+Number(rec.pop).toLocaleString('en-IN')+' people')+'</b></p>':'')
       +(rec.citation?'<p class="nfi-cit">🌟 Quality Pioneer'+(rec.pioneerYear?' '+scEsc(rec.pioneerYear):'')+': “'+scEsc(rec.citation)+'”</p>':'')+'<p class="nfi-upd">'+(rec.honorary?'Title given by HealSol Academy':'Worked out by HealSol Academy from verified programme data')+' · updated '+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</p></div>'
       :'<div class="nfv-st no"><i class="ti ti-alert-triangle"></i><div><b>Card not found</b><small>This impact card could not be found. Ask the person to share it again from the app.</small></div></div>')
-    +'<div class="nfv-foot">NQAS | FAST · by HealSol Academy · <a href="'+scEsc(NF_APP_HOME)+'" target="_blank" rel="noopener">Learn about NQAS | FAST</a></div>';
+    +'<div class="nfv-foot">NQAS | FAST · by HealSol Academy<a class="nfv-cta" href="'+scEsc(NF_APP_HOME)+'" target="_blank" rel="noopener" onclick="return nfOpenOut(this.href)">'+(rec?'Want your facility NQAS Ready? ':'')+'Learn about NQAS | FAST →</a></div>';
   return true;
 }
 (function(){ if(typeof nfVerifyBoot==='function'){ var oV=nfVerifyBoot; nfVerifyBoot=function(){ try{ if(/^IMP-/i.test((new URLSearchParams(location.search).get('cert')||'').trim())) return Promise.resolve(false); }catch(e){} return oV.apply(this,arguments); }; } })();
