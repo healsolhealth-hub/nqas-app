@@ -19837,6 +19837,7 @@ function nfImpCopy(t){ try{ if(navigator.clipboard&&window.isSecureContext) navi
 var NF_CARD_BASE='https://asia-south1-healsol-nqas.cloudfunctions.net/card';
 function nfImpCardBase(){ return (_nfImp.cfg&&_nfImp.cfg.cardBase)||NF_CARD_BASE; }
 function nfImpCardUrl(rec,extra){ return nfImpCardBase()+'?id='+encodeURIComponent(rec.publicId||'')+(nfImpHi()?'&l=hi':'')+(extra||''); }
+function nfImpFresh(u){ return u+(u.indexOf('?')>=0?'&':'?')+'t='+Date.now().toString(36); }   // a fresh address each time, so the phone never shows an old copy
 var _nfImpUrl={};   // key → card page address once the picture is on the server
 async function nfImpPublish(rec){
   await nfImpCfg(); if(!rec||!rec.publicId||!rec.key) return null;
@@ -19859,7 +19860,7 @@ function nfImpEmbedded(){ try{ return window.self!==window.top; }catch(e){ retur
 // kind: wa | ig | li | save
 async function nfImpGo(kind,btn){
   var rec=_nfImp.rec; if(!rec) return; var hi=nfImpHi();
-  var target=function(url){ return kind==='li'?'https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url):kind==='save'?url+'&img=1&dl=1':url+'&own=1&'+(kind==='ig'?'ig=1':'wa=1'); };
+  var target=function(url){ return kind==='li'?'https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url):kind==='save'?nfImpFresh(url+'&img=1&dl=1'):nfImpFresh(url+'&own=1&'+(kind==='ig'?'ig=1':'wa=1')); };
   var tell=function(){ if(kind==='save') return; nfImpCopy(nfImpCaption(rec,kind==='ig'));
     showToast(kind==='li'?(hi?'कैप्शन कॉपी हो गया — LinkedIn में पेस्ट करें।':'Caption copied — paste it in LinkedIn.'):(hi?'खुले पेज पर "तस्वीर साझा करें" दबाएँ और '+(kind==='ig'?'Instagram':'WhatsApp')+' चुनें।':'On the page that opens, tap "Share picture" and choose '+(kind==='ig'?'Instagram':'WhatsApp')+'.'),'ok'); };
   if(kind==='save'&&!(('ontouchstart' in window)||navigator.maxTouchPoints>0)&&!nfImpEmbedded()){ var bl=await nfImpBlob(rec); if(bl){ nfImpDownload(bl); return; } }
