@@ -20506,7 +20506,7 @@ function nfDScopeMatch(sc,f,code){ if(!sc) return false; var c=nfrStateCode(f.st
   if(sc.fac&&sc.fac[code]) return true; if(sc.st&&c&&sc.st[c]) return true;
   if(sc.di&&Object.keys(sc.di).some(function(k){ var p=k.split('|'); return sc.di[k]&&p[0]===c&&nfDSlug(p[1])===d; })) return true;
   if(sc.bl&&Object.keys(sc.bl).some(function(k){ var p=k.split('|'); return sc.bl[k]&&p[0]===c&&nfDSlug(p[1])===d&&nfDSlug(p[2])===b; })) return true; return false; }
-function nfDMatchCount(sc){ var F=scMasterFacilities||{}, inc=!!((_nfD.cfg||{}).includeDemo); return Object.keys(F).filter(function(c){ var f=F[c]; return f&&!f.migratedTo&&(inc||!f.isDemo)&&nfDScopeMatch(sc,f,c); }).length; }
+function nfDMatchCount(sc,demo){ var F=scMasterFacilities||{}, inc=!!demo||!!((_nfD.cfg||{}).includeDemo); return Object.keys(F).filter(function(c){ var f=F[c]; return f&&!f.migratedTo&&(inc||!f.isDemo)&&nfDScopeMatch(sc,f,c); }).length; }
 function nfDScopeText(sc){ sc=sc||{}; var a=[]; var n=function(o){ return Object.keys(o||{}).filter(function(k){ return o[k]; }); };
   var st=n(sc.st), di=n(sc.di), bl=n(sc.bl), fa=n(sc.fac);
   if(st.length) a.push(st.map(nfrStateName).join(', ')); if(di.length) a.push(di.length+' district'+(di.length>1?'s':'')); if(bl.length) a.push(bl.length+' block'+(bl.length>1?'s':'')); if(fa.length) a.push(fa.length+' facilit'+(fa.length>1?'ies':'y'));
@@ -20537,14 +20537,15 @@ async function nfDPortDel(pid){ var p=(_nfD.ports||{})[pid]; if(!p) return; var 
   var v=await scDialog({title:'Remove portfolio?',icon:'🗑️',okLabel:'Remove',message:p.name+' — its dashboard is removed at the next update.',fields:[]}); if(!v) return;
   var ok=await fbSet('sc_portfolios/'+pid,null); if(ok) delete _nfD.ports[pid]; showToast(ok?'Removed.':'Could not remove.',ok?'ok':'err'); nfDAdminRender(); }
 // portfolio form
-function nfDPortForm(pid){ var p=pid?(_nfD.ports||{})[pid]||{}:{kind:'donor',scope:{}}; _nfD.edit={pid:pid||'',sc:JSON.parse(JSON.stringify(p.scope||{})),logo:p.logo||''};
+function nfDPortForm(pid){ var p=pid?(_nfD.ports||{})[pid]||{}:{kind:'donor',scope:{}}; _nfD.edit={pid:pid||'',sc:JSON.parse(JSON.stringify(p.scope||{})),logo:p.logo||'',demo:!!p.demo};
   var stOpts='<option value="">State…</option>'+(NF_STATE_LIST||[]).slice().sort(function(a,b){ return a[0].localeCompare(b[0]); }).map(function(s){ return '<option value="'+s[1]+'">'+scEsc(s[0])+'</option>'; }).join('');
   var ov=document.createElement('div'); ov.className='nfr-ov'; ov.id='nfr-ov';
   ov.innerHTML='<form class="nfr-form" onsubmit="event.preventDefault();nfDPortSave();"><div class="nfr-fh"><b>'+(pid?'Edit portfolio':'New portfolio')+'</b><button type="button" onclick="nfrClose()" title="Close">✕</button></div>'
     +'<fieldset><legend>1 · Portfolio</legend><label>Name <small>(shown at the top of the dashboard)</small><input id="nfd-pn" maxlength="80" placeholder="e.g. Uttar Pradesh — NHM, or ABC Foundation (Jhansi)" value="'+scEsc(p.name||'')+'"></label>'
     +'<label>Type<select id="nfd-pk"><option value="donor"'+(p.kind!=='state'?' selected':'')+'>Donor / Partner</option><option value="state"'+(p.kind==='state'?' selected':'')+'>State</option></select></label>'
     +'<div class="nfr-logo"><div id="nfd-lgp">'+nfDLogoPrev()+'</div><label class="nfr-btn ghost">📥 '+(p.logo?'Change logo':'Logo (optional)')+'<input type="file" accept="image/png,image/jpeg" hidden onchange="nfDPickLogo(this)"></label><small>Shown on the dashboard and the PDF report. Use only with the partner\'s permission.</small></div>'
-    +'<label class="nfr-tick" style="margin-top:8px;"><input type="checkbox" id="nfd-off"'+(p.off?' checked':'')+'> Switched off (the dashboard is hidden)</label></fieldset>'
+    +'<label class="nfr-tick" style="margin-top:8px;"><input type="checkbox" id="nfd-off"'+(p.off?' checked':'')+'> Switched off (the dashboard is hidden)</label>'
+    +'<label class="nfr-tick" style="margin-top:6px;"><input type="checkbox" id="nfd-demo"'+(p.demo?' checked':'')+' onchange="_nfD.edit.demo=this.checked;nfDChips()"> Demo portfolio — also counts demo / self-registered facilities <small class="nfr-muted">(for showing partners — add your own demo facilities one by one, not a whole state; public totals never include them)</small></label></fieldset>'
     +'<fieldset><legend>2 · Facilities it covers</legend><p class="nfr-muted" style="margin:0 0 8px;">Add any mix — a facility in any of them counts.</p>'
     +'<div class="nfd-add"><b>Whole state</b><select id="nfd-s1">'+stOpts+'</select><button type="button" class="nfr-btn ghost sm" onclick="nfDAdd(\'st\')">Add</button></div>'
     +'<div class="nfd-add"><b>District</b><select id="nfd-s2" onchange="nfDFillD(\'2\')">'+stOpts+'</select><select id="nfd-d2"><option value="">District…</option></select><button type="button" class="nfr-btn ghost sm" onclick="nfDAdd(\'di\')">Add</button></div>'
@@ -20569,13 +20570,13 @@ function nfDChips(){ var E=_nfD.edit.sc, F=scMasterFacilities||{}, h=[], lbl={st
   ['st','di','bl','fac'].forEach(function(t){ Object.keys(E[t]||{}).forEach(function(k){ if(!E[t][k]) return; var p=k.split('|'), txt=t==='st'?nfrStateName(k):t==='di'?p[1]+', '+nfrStateName(p[0]):t==='bl'?p[2]+' block, '+p[1]:((F[k]||{}).name||k);
     h.push('<span class="nfr-pill"><small>'+lbl[t]+':</small> '+scEsc(txt)+' <button type="button" title="Remove" onclick="nfDDel(\''+t+'\',\''+scJs(k)+'\')">✕</button></span>'); }); });
   var c=document.getElementById('nfd-chips'); if(c) c.innerHTML=h.join('')||'<span class="nfr-muted">Nothing added yet.</span>';
-  var m=document.getElementById('nfd-match'); if(m) m.textContent='Covers '+nfDMatchCount(E)+' facilities today'+(((_nfD.cfg||{}).includeDemo)?' (demo facilities counted)':' (demo facilities not counted)')+'.'; }
+  var m=document.getElementById('nfd-match'); if(m) m.textContent='Covers '+nfDMatchCount(E,_nfD.edit.demo)+' facilities today'+((_nfD.edit.demo||(_nfD.cfg||{}).includeDemo)?' (demo facilities counted)':' (demo facilities not counted)')+'.'; }
 async function nfDPortSave(){ var g=function(i){ var e=document.getElementById(i); return e?String(e.value||'').trim():''; }, err=document.getElementById('nfr-err'), E=_nfD.edit;
   var name=g('nfd-pn'); if(name.length<3){ err.textContent='Enter the portfolio name.'; return; }
   var sc={}; ['st','di','bl','fac'].forEach(function(t){ var o={}; Object.keys(E.sc[t]||{}).forEach(function(k){ if(E.sc[t][k]) o[k]=true; }); if(Object.keys(o).length) sc[t]=o; });
   if(!Object.keys(sc).length){ err.textContent='Add at least one state, district, block or facility.'; return; }
   var pid=E.pid||('P'+Date.now().toString(36)), old=(_nfD.ports||{})[pid]||{}, by=nfrBy(), now=scNowIso();
-  var rec={name:name,kind:g('nfd-pk')==='state'?'state':'donor',logo:E.logo||null,scope:sc,off:document.getElementById('nfd-off').checked?true:null,by:old.by||by,at:old.at||now,updatedBy:by,updatedAt:now};
+  var rec={name:name,kind:g('nfd-pk')==='state'?'state':'donor',logo:E.logo||null,scope:sc,off:document.getElementById('nfd-off').checked?true:null,demo:document.getElementById('nfd-demo').checked?true:null,by:old.by||by,at:old.at||now,updatedBy:by,updatedAt:now};
   var ok=await fbSet('sc_portfolios/'+pid,JSON.parse(JSON.stringify(rec))); if(!ok){ err.textContent='Could not save.'; return; }
   _nfD.ports[pid]=rec; nfrClose(); showToast('Saved. Tap "Update dashboards now" to prepare its dashboard.','ok'); nfDAdminRender(); }
 // logins
