@@ -19315,7 +19315,7 @@ async function nfgNhsrcEdit(code){
       {key:'certifiedOn',label:'Certified on (date on the certificate)',type:'date',value:n.certifiedOn||''},{key:'score',label:'NHSRC score (%)',type:'number',value:n.score!=null?n.score:''},
       {key:'certNo',label:'Certificate number',value:n.certNo||''},{key:'s1Done',label:'Surveillance year 1 done on',type:'date',value:n.s1Done||''},{key:'s2Done',label:'Surveillance year 2 done on',type:'date',value:n.s2Done||''},
       {key:'note',label:'Note',type:'textarea',rows:2,value:n.note||''}],
-    validate:function(v){ if(v.status==='certified'&&!v.certifiedOn) return 'Enter the certification date.'; if(v.score!==''&&!(+v.score>=0&&+v.score<=100)) return 'Score must be 0–100.'; return null; }});
+    validate:function(v){ if(v.status==='certified'&&!v.certifiedOn) return 'Enter the certification date.'; if(v.status==='certified'&&v.score==='') return 'Enter the NHSRC score (%) — it is printed on the certification report.'; if(v.score!==''&&!(+v.score>=0&&+v.score<=100)) return 'Score must be 0–100.'; return null; }});
   if(!v) return;
   var rec=scClean({status:v.status,appliedOn:v.appliedOn||null,stateOn:v.stateOn||null,nationalOn:v.nationalOn||null,certifiedOn:v.certifiedOn||null,score:v.score===''?null:+v.score,certNo:v.certNo||null,
     s1Done:v.s1Done||null,s2Done:v.s2Done||null,note:v.note||null,validUntil:v.certifiedOn?nfgAdd(v.certifiedOn,0).replace(/^(\d{4})/,function(m){ return String(+m+NF_GRAD.certYears); }):null,updatedAt:scNowIso(),updatedBy:scActor().name||appMode});
@@ -19622,7 +19622,14 @@ var _nfDirty={};
 <style id="nf-imp-css">
 .nfi-card{border-radius:20px;padding:16px;margin:12px 0;background:linear-gradient(135deg,#0F5F56,#134E4A);color:#fff;}
 .nfi-card .lv{font-size:12px;opacity:.85;font-weight:700;letter-spacing:.3px;} .nfi-card h3{margin:2px 0 4px;font-size:19px;} .nfi-st{color:#FBBF24;font-size:20px;letter-spacing:2px;}
-.nfi-st i{color:rgba(255,255,255,.28);font-style:normal;} .nfi-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;}
+.nfi-st i{color:rgba(255,255,255,.28);font-style:normal;} .nfi-half{font-weight:inherit;background:linear-gradient(90deg,#FBBF24 50%,rgba(255,255,255,.28) 50%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.nfi-how .nfi-half{background:linear-gradient(90deg,#B45309 50%,#E5E7EB 50%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.nfi-ov .nfi-half,#nf-verify .nfi-half{background:linear-gradient(90deg,#FBBF24 50%,#E5E7EB 50%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.nfi-starbtn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;} .nfi-starbtn small{font-size:11px;opacity:.85;text-decoration:underline;}
+.nfi-why{font-size:12.5px;font-weight:600;margin:2px 0 4px;opacity:.95;} .nfi-prog{background:rgba(255,255,255,.1);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:12px;line-height:1.5;} .nfi-prog b{display:block;font-size:11.5px;opacity:.85;}
+.nfi-upd2{font-size:11px;opacity:.75;margin-top:8px;} .nfi-btns .li{background:#0A66C2;color:#fff;} .nfi-btns .ig{background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF);color:#fff;}
+.nfi-how{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:100002;display:flex;align-items:flex-end;justify-content:center;} .nfi-how > div{background:#fff;color:#0F172A;border-radius:20px 20px 0 0;max-width:520px;width:100%;padding:18px 18px 24px;max-height:85vh;overflow:auto;}
+.nfi-how h3{margin:0 0 4px;font-size:17px;} .nfi-how table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0;} .nfi-how td{padding:6px 4px;border-bottom:1px solid #F1F5F9;} .nfi-how td:first-child{color:#B45309;white-space:nowrap;font-weight:700;} .nfi-how tr.me td{background:#F0FDFA;font-weight:700;} .nfi-how p{font-size:13px;color:#475569;margin:6px 0;} .nfi-how button{margin-top:10px;width:100%;border:0;border-radius:12px;background:#135A55;color:#fff;font-weight:700;padding:12px;font-size:14px;cursor:pointer;} .nfi-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0;}
 .nfi-nums div{background:rgba(255,255,255,.12);border-radius:12px;padding:8px 4px;text-align:center;} .nfi-nums b{display:block;font-size:20px;} .nfi-nums small{font-size:10.5px;opacity:.9;}
 .nfi-care{font-size:13px;font-weight:600;margin:6px 0;} .nfi-next{font-size:11.5px;opacity:.85;}
 .nfi-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;} .nfi-btns button{border:0;border-radius:12px;padding:10px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
@@ -19712,6 +19719,8 @@ body.nf-admin:not(.nfv-recog) .admin-main > [data-nfv="recog"]{display:none!impo
 var NF_LEVEL={starter:{en:'Quality Starter',hi:'क्वालिटी स्टार्टर',ic:'🌱',n:1},practitioner:{en:'Quality Practitioner',hi:'क्वालिटी प्रैक्टिशनर',ic:'✅',n:2},
   achiever:{en:'Quality Achiever',hi:'क्वालिटी अचीवर',ic:'🏅',n:3},champion:{en:'Quality Champion',hi:'क्वालिटी चैंपियन',ic:'🤝',n:4},
   leader:{en:'Quality Leader',hi:'क्वालिटी लीडर',ic:'🧭',n:5},pioneer:{en:'Quality Pioneer',hi:'क्वालिटी पायनियर',ic:'🌟',n:6}};
+// Leaders / Pioneers: numbers on the card only when HealSol switches them on
+function nfImpNoNums(rec){ return !!rec&&(rec.kind==='mentor'||rec.kind==='honorary')&&(!rec.showNums||!(rec.nums&&rec.nums.facilities)); }
 // what earns the next level (shown under "My impact")
 function nfImpNextHint(rec){ var hi=nfImpHi(), l=rec&&rec.level, c=rec&&rec.champion;
   if(l==='starter') return hi?'अगला स्तर: ✅ क्वालिटी प्रैक्टिशनर — जब आपका केंद्र NQAS तैयार हो।':'Next level: ✅ Quality Practitioner — when your facility is NQAS Ready.';
@@ -19723,8 +19732,11 @@ var NF_IMP_VERIFY=(typeof NF_CERT_VERIFY_BASE!=='undefined'&&NF_CERT_VERIFY_BASE
 var _nfImp={rec:null,key:'',at:0,cfg:null,partners:null};
 function nfImpHi(){ return typeof _appLang!=='undefined'&&_appLang==='hi'; }
 function nfImpLv(l){ var x=NF_LEVEL[l]; return x?(nfImpHi()?x.hi:x.en):''; }
-function nfImpStars(n,plain){ if(!n) return ''; var s='★★★★★'.slice(0,n), e='★★★★★'.slice(n); return plain?s+'☆☆☆☆☆'.slice(0,5-n):'<span class="nfi-st">'+s+'<i>'+e+'</i></span>'; }
-function nfImpTagHTML(t){ if(!t||!t.level) return ''; return ' <span class="nfi-tag" title="'+scEsc(nfImpLv(t.level))+'">'+(t.stars?'★'.repeat(t.stars):NF_LEVEL[t.level].ic)+'</span>'; }
+function nfImpStarParts(n){ n=+n||0; var f=Math.floor(n), h=n-f>=0.5?1:0; return {f:f,h:h,e:Math.max(0,5-f-h)}; }
+function nfImpStars(n,plain){ if(!n) return ''; var p=nfImpStarParts(n);
+  if(plain) return '★'.repeat(p.f)+(p.h?'½':'')+'☆'.repeat(p.e);
+  return '<span class="nfi-st" role="img" aria-label="'+n+' / 5">'+'★'.repeat(p.f)+(p.h?'<b class="nfi-half">★</b>':'')+'<i>'+'★'.repeat(p.e)+'</i></span>'; }
+function nfImpTagHTML(t){ if(!t||!t.level) return ''; return ' <span class="nfi-tag" title="'+scEsc(nfImpLv(t.level))+'">'+(t.stars?nfImpStars(t.stars,true).replace(/☆/g,''):NF_LEVEL[t.level].ic)+'</span>'; }
 function nfImpSlug(x){ return String(x||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
 async function nfImpCfg(){ if(_nfImp.cfg&&_nfImp.partners) return; try{ _nfImp.cfg=await fbGet('shared/sc_impact_config')||{}; _nfImp.partners=await fbGet('shared/sc_impact_partners')||{}; }catch(e){ _nfImp.cfg=_nfImp.cfg||{}; _nfImp.partners=_nfImp.partners||{}; } }
 async function nfImpLoad(key,force){ if(!key) return null; if(!force&&_nfImp.key===key&&Date.now()-_nfImp.at<120000) return _nfImp.rec;
@@ -19739,7 +19751,7 @@ function nfImpCare(rec,villages){ var hi=nfImpHi(), n=rec.pop||0; if(!n) return 
 }
 function nfImpNums(rec){ var hi=nfImpHi(), n=rec.nums||{};
   if(rec.kind==='staff') return [[n.fixed||0,hi?'कमियाँ सुधारीं':'items fixed'],[n.onTime||0,hi?'कार्ड समय पर':'cards on time'],['+'+(n.gain||0),hi?'अंक सुधार':'points better']];
-  if(rec.kind==='champion') return [[n.facilities||0,hi?'केंद्रों की मदद':'facilities helped'],[n.verified||0,hi?'आइटम जाँचे':'items checked'],[n.ready||0,hi?'NQAS तैयार':'NQAS Ready']];
+  if(rec.kind==='champion') return [[n.facilities||0,hi?'केंद्रों की मदद':'facilities helped'],[n.verified||0,hi?'कार्ड जाँचे':'cards checked'],[n.ready||0,hi?'NQAS तैयार':'NQAS Ready']];
   return [[n.facilities||0,hi?'केंद्रों का मार्गदर्शन':'facilities mentored'],[n.ready||0,hi?'NQAS तैयार':'NQAS Ready'],['+'+(n.gain||0),hi?'औसत सुधार':'average gain']];
 }
 function nfImpNameChoice(){ try{ return localStorage.getItem('nfi_name')||'full'; }catch(e){ return 'full'; } }
@@ -19759,15 +19771,21 @@ async function nfImpCanvas(rec){
   g.textAlign='center'; g.fillStyle='#fff';
   var lv=NF_LEVEL[rec.level]||{}; g.font='600 40px '+F; g.fillStyle='#A7F3D0'; g.fillText((hi?'सामाजिक प्रभाव':'SOCIAL IMPACT')+' · NQAS | FAST',W/2,230);
   g.font='700 76px '+F; g.fillStyle='#fff'; var nm=nfImpShownName(rec); while(g.measureText(nm).width>W-120&&nm.length>4) nm=nm.slice(0,-1); g.fillText(nm,W/2,330);
-  g.font='600 44px '+F; g.fillStyle='#E2E8F0'; g.fillText((rec.role||'')+(nfImpMain(rec).name&&!nfImpHideFac(rec)&&(rec.facilities||[]).length===1?' · '+nfImpMain(rec).name:''),W/2,395);
+  g.font='600 44px '+F; g.fillStyle='#E2E8F0'; g.fillText((rec.role||'')+(nfImpMain(rec).name&&!nfImpHideFac(rec)&&!nfImpNoNums(rec)&&(rec.facilities||[]).length===1?' · '+nfImpMain(rec).name:''),W/2,395);
   g.font='700 58px '+F; g.fillStyle='#FDE68A'; g.fillText((lv.ic||'')+' '+nfImpLv(rec.level),W/2,500);
-  if(rec.stars){ g.font='700 92px '+F; var s='★★★★★'.slice(0,rec.stars), e='★★★★★'.slice(rec.stars), ws=g.measureText(s).width, we=g.measureText(e).width, x0=W/2-(ws+we)/2; g.textAlign='left'; g.fillStyle='#FBBF24'; g.fillText(s,x0,610); g.fillStyle='rgba(255,255,255,.25)'; g.fillText(e,x0+ws,610); g.textAlign='center'; }
-  var noNums=rec.kind==='honorary'&&!(rec.nums&&rec.nums.facilities);
+  if(rec.stars){ g.font='700 92px '+F; var sp=nfImpStarParts(rec.stars), sw=g.measureText('★').width, tot=sw*5, x0=W/2-tot/2; g.textAlign='left';
+    for(var si=0;si<5;si++){ var xx=x0+si*sw; g.fillStyle='rgba(255,255,255,.25)'; g.fillText('★',xx,610);
+      if(si<sp.f){ g.fillStyle='#FBBF24'; g.fillText('★',xx,610); } else if(si===sp.f&&sp.h){ g.save(); g.beginPath(); g.rect(xx,500,sw/2,140); g.clip(); g.fillStyle='#FBBF24'; g.fillText('★',xx,610); g.restore(); } }
+    g.textAlign='center'; }
+  var why=nfImpWhy(rec); if(why&&rec.stars){ g.font='500 32px '+F; g.fillStyle='#CCFBF1'; g.fillText(why,W/2,662); }
+  var noNums=nfImpNoNums(rec);
   if(rec.level==='pioneer'&&rec.citation){ g.font='italic 500 '+(noNums?40:34)+'px '+F; g.fillStyle='#FDE68A'; nfImpWrap(g,'“'+rec.citation+'”',W/2,noNums?640:565,W-160,noNums?54:42); }
-  if(noNums){ var ms=nfImpMain(rec), pl=[((rec.facilities||[]).length?ms.state:rec.state)||'',rec.pioneerYear||''].filter(Boolean).join(' · '); if(pl){ g.font='500 38px '+F; g.fillStyle='#CCFBF1'; g.fillText(pl,W/2,rec.citation?880:640); } }
-  var N=noNums?[]:nfImpNums(rec), bw=300, gap=30, bx=(W-3*bw-2*gap)/2, by=670;
-  N.forEach(function(x,i){ var X=bx+i*(bw+gap); g.fillStyle='rgba(255,255,255,.12)'; nfImpRound(g,X,by,bw,190,28); g.fill(); g.fillStyle='#fff'; g.font='700 80px '+F; g.fillText(String(x[0]),X+bw/2,by+105); g.font='500 34px '+F; g.fillStyle='#CCFBF1'; g.fillText(x[1],X+bw/2,by+160); });
-  var care=nfImpCare(rec,nfImpVillages(rec)); if(care){ g.font='600 40px '+F; g.fillStyle='#fff'; nfImpWrap(g,care,W/2,950,W-140,52); }
+  if(noNums){ var ms=nfImpMain(rec), yr=rec.pioneerYear||String(rec.leaderSince||rec.levelSince||'').slice(0,4), st0=rec.state||ms.state||'', pl=[(typeof nfrStateCode==='function'&&nfrStateCode(st0)?nfrStateName(nfrStateCode(st0)):st0),yr].filter(Boolean).join(' · '), y0=rec.level==='pioneer'&&rec.citation?820:720;
+    if(pl){ g.font='500 40px '+F; g.fillStyle='#CCFBF1'; g.fillText(pl,W/2,y0); }
+    g.font='600 36px '+F; g.fillStyle='#A7F3D0'; g.fillText(hi?'हेल्सोल अकादमी द्वारा सम्मानित':'Recognised by HealSol Academy',W/2,y0+(pl?62:0)); }
+  var N=noNums?[]:nfImpNums(rec), bw=300, gap=30, bx=(W-3*bw-2*gap)/2, by=690;
+  N.forEach(function(x,i){ var X=bx+i*(bw+gap); g.fillStyle='rgba(255,255,255,.12)'; nfImpRound(g,X,by,bw,170,28); g.fill(); g.fillStyle='#fff'; g.font='700 76px '+F; g.fillText(typeof x[0]==='number'?x[0].toLocaleString('en-IN'):String(x[0]),X+bw/2,by+95); g.font='500 32px '+F; g.fillStyle='#CCFBF1'; g.fillText(x[1],X+bw/2,by+145); });
+  var care=noNums?'':nfImpCare(rec,nfImpVillages(rec)); if(care){ g.font='600 40px '+F; g.fillStyle='#fff'; g.font='600 36px '+F; nfImpWrap(g,care,W/2,930,W-140,46); }
   // QR + verify note
   var url=nfImpVerifyUrl(rec), qy=1035, qs=170; try{ var q=qrcode(0,'M'); q.addData(url); q.make(); var n=q.getModuleCount(), cell=qs/n; g.fillStyle='#fff'; nfImpRound(g,60,qy,qs+24,qs+24,14); g.fill(); g.fillStyle='#0F172A';
     for(var r=0;r<n;r++) for(var k=0;k<n;k++) if(q.isDark(r,k)) g.fillRect(72+k*cell,qy+12+r*cell,Math.ceil(cell),Math.ceil(cell)); }catch(e){}
@@ -19783,17 +19801,81 @@ function nfImpHideFac(rec){ var m=nfImpMain(rec), h=(_nfImp.cfg&&_nfImp.cfg.hide
 function nfImpRound(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
 function nfImpWrap(g,t,x,y,max,lh){ var w=t.split(' '), line='', yy=y; w.forEach(function(word){ var test=line?line+' '+word:word; if(g.measureText(test).width>max&&line){ g.fillText(line,x,yy); line=word; yy+=lh; } else line=test; }); if(line) g.fillText(line,x,yy); }
 async function nfImpBlob(rec){ var c=await nfImpCanvas(rec); if(!c) return null; return await new Promise(function(r){ try{ c.toBlob(function(b){ r(b); },'image/jpeg',0.86); }catch(e){ r(null); } }); }
-function nfImpText(rec){ var hi=nfImpHi(); return (hi?'मेरा NQAS सफ़र: ':'My NQAS journey: ')+nfImpLv(rec.level)+(rec.stars?' '+nfImpStars(rec.stars,true):'')+'. '+(nfImpCare(rec,nfImpVillages(rec))||'')+' '+(hi?'जाँचें: ':'Verify: ')+nfImpVerifyUrl(rec); }
+// ── why these stars (one line) and how stars work (tap the stars) ──
+function nfImpWhy(rec){ var w=rec&&rec.why, hi=nfImpHi(); if(!w) return '';
+  if(w.k==='bl') return hi?'बेसलाइन जारी है':'Baseline in progress';
+  if(w.k==='pts') return hi?'कार्यक्रम के 100 में से '+(w.v||0)+' अंक':(w.v||0)+' of 100 programme points';
+  if(w.k==='ready') return w.v!=null?(hi?'NQAS तैयार स्कोर '+w.v+'%':'NQAS Ready score '+w.v+'%'):(hi?'NQAS तैयार':'NQAS Ready');
+  if(w.k==='nhsrc') return w.v!=null?(hi?'NHSRC स्कोर '+w.v+'%':'NHSRC score '+w.v+'%'):(hi?'NHSRC प्रमाणित':'NHSRC certified');
+  if(w.k==='sup') return hi?w.v+' केंद्रों को सहयोग':'Supported '+w.v+' facilit'+(w.v===1?'y':'ies');
+  return ''; }
+function nfImpHowRows(level){ var hi=nfImpHi();
+  if(level==='starter') return {t:hi?'स्टार्टर के सितारे':'Starter stars',p:hi?'अंक (100 में से): समय पर कार्यान्वयन कार्ड (दिन 8–49) 50 + अपनी बेसलाइन की कमियाँ सुधारीं 30 + पुनरावृत्ति / एंड-लाइन कार्ड (दिन 50–56) 20।':'Points out of 100: implementation cards on time (Days 8–49) 50 + your own baseline gaps fixed 30 + revision / end-line cards (Days 50–56) 20.',
+    r:[[0.5,hi?'बेसलाइन जारी':'Baseline in progress'],[1,hi?'बेसलाइन पूरी':'Baseline done'],[2,hi?'30+ अंक':'30+ points'],[3,hi?'55+ अंक':'55+ points'],[4,hi?'75+ अंक':'75+ points'],[5,hi?'90+ अंक':'90+ points']]};
+  if(level==='practitioner') return {t:hi?'प्रैक्टिशनर के सितारे':'Practitioner stars',p:hi?'आपके केंद्र का NQAS तैयार (ग्रेजुएशन) स्कोर।':'Your facility\'s NQAS Ready (graduation) score.',r:[[3,'70–74%'],[4,'75–79%'],[5,'80%+']]};
+  if(level==='achiever') return {t:hi?'अचीवर के सितारे':'Achiever stars',p:hi?'आपके केंद्र का NHSRC प्रमाणन स्कोर।':'Your facility\'s NHSRC certification score.',r:[[4,'70–79%'],[5,'80%+']]};
+  if(level==='champion') return {t:hi?'चैंपियन के सितारे':'Champion stars',p:hi?'एक केंद्र तब गिना जाता है जब उसका कार्यक्रम बंद हो और आपने उसके स्टाफ के पूरे किए कार्डों में से 80% या अधिक जाँचे हों (अपना केंद्र नहीं गिना जाता; केंद्र का स्कोर मायने नहीं रखता)।':'A facility counts when its programme has closed and you checked 80% or more of the cards its staff completed (your own facility does not count; the facility\'s score does not matter).',
+    r:[[0.5,hi?'1–9 केंद्र':'1–9 facilities'],[1,'10–19'],[2,'20–29'],[3,'30–39'],[4,'40–49'],[5,'50+']]};
+  return null; }
+function nfImpHow(){ var rec=_nfImp.rec; if(!rec) return; var H=nfImpHowRows(rec.level), hi=nfImpHi(); if(!H) return;
+  var cur=+rec.stars||0, ov=document.createElement('div'); ov.className='nfi-how';
+  ov.innerHTML='<div role="dialog" aria-modal="true"><h3>'+(NF_LEVEL[rec.level]||{}).ic+' '+scEsc(H.t)+'</h3><p>'+scEsc(H.p)+'</p><table>'+H.r.map(function(x){ return '<tr class="'+(x[0]===cur?'me':'')+'"><td>'+(function(n){ var q=nfImpStarParts(n); return '★'.repeat(q.f)+(q.h?'<b class="nfi-half">★</b>':''); })(x[0])+'</td><td>'+scEsc(x[1])+(x[0]===cur?' ← '+(hi?'आप':'you'):'')+'</td></tr>'; }).join('')+'</table>'
+    +(nfImpWhy(rec)?'<p><b>'+scEsc(hi?'अभी:':'Now:')+'</b> '+scEsc(nfImpWhy(rec))+'</p>':'')+'<p>'+scEsc(hi?'सितारे हर रात अपडेट होते हैं और कभी कम नहीं होते। नए स्तर पर सितारे फिर से शुरू होते हैं।':'Stars are updated every night and never go down. At a new level the stars start again.')+'</p>'
+    +'<button type="button" onclick="this.closest(\'.nfi-how\').remove()">'+scEsc(hi?'ठीक है':'OK')+'</button></div>';
+  ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); }); document.body.appendChild(ov); }
+// ── captions (English / Hindi) ──
+var NF_IMP_TAGS='#NQAS #QualityOfCare #HealSolAcademy #NQASFAST';
+function nfImpTitled(rec){ return rec&&(rec.level==='leader'||rec.level==='pioneer'); }
+function nfImpCaption(rec,ig){ var hi=nfImpHi(), lv=nfImpLv(rec.level), st=rec.stars?' '+nfImpStars(rec.stars,true):'', care=nfImpNoNums(rec)?'':(nfImpCare(rec,nfImpVillages(rec))||''), v=ig?(hi?' कार्ड पर QR स्कैन करके जाँचें।':' Scan the QR on the card to verify.'):'';
+  if(nfImpTitled(rec)) return hi?'HealSol Academy द्वारा '+lv+' के रूप में सम्मानित होकर गौरवान्वित हूँ — सार्वजनिक स्वास्थ्य में गुणवत्तापूर्ण देखभाल के लिए।'+v+' '+NF_IMP_TAGS:'Honoured to be recognised as a '+lv+' by HealSol Academy for quality of care in public health.'+v+' '+NF_IMP_TAGS;
+  return hi?'NQAS | FAST (HealSol Academy) के साथ मेरे NQAS सफ़र में मैं '+lv+st+' हूँ।'+(care?' '+care+'।':'')+v+' '+NF_IMP_TAGS:'I am a '+lv+st+' on my NQAS journey with NQAS | FAST by HealSol Academy.'+(care?' '+care+'.':'')+v+' '+NF_IMP_TAGS; }
+function nfImpText(rec,url){ return nfImpCaption(rec,false)+'\n'+(url||nfImpVerifyUrl(rec)); }
+function nfImpCopy(t){ try{ if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(t).catch(function(){}); }catch(e){}
+  try{ var ta=document.createElement('textarea'); ta.value=t; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;top:-1000px;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){} }
+// ── the card picture on the server: made here, stored at sc_impact_img/{key}, shown at …/card?id= (link preview) ──
+var NF_CARD_BASE='https://asia-south1-healsol-nqas.cloudfunctions.net/card';
+function nfImpCardBase(){ return (_nfImp.cfg&&_nfImp.cfg.cardBase)||NF_CARD_BASE; }
+function nfImpCardUrl(rec,extra){ return nfImpCardBase()+'?id='+encodeURIComponent(rec.publicId||'')+(nfImpHi()?'&l=hi':'')+(extra||''); }
+async function nfImpPublish(rec){
+  await nfImpCfg(); if(!rec||!rec.publicId||!rec.key) return null;
+  var sig=[rec.level,rec.stars,rec.updatedAt,rec.name,nfImpNameChoice(),nfImpHi()?'hi':'en',rec.citation||'',rec.showNums?1:0].join('|'), lk='nfi_pub_'+rec.key, done='';
+  try{ done=localStorage.getItem(lk)||''; }catch(e){}
+  if(done===sig) return nfImpCardUrl(rec);
+  var c=await nfImpCanvas(rec); if(!c) return null; var d=c.toDataURL('image/jpeg',0.8).split(',')[1]; if(!d) return null;
+  var ok=await fbSet('sc_impact_img/'+rec.key,{d:d,at:scNowIso(),sig:sig}); if(!ok) return null;
+  try{ localStorage.setItem(lk,sig); }catch(e){}
+  return nfImpCardUrl(rec); }
+function nfImpBusy(btn,on,old){ if(!btn) return old; if(on){ var o=btn.innerHTML; btn.disabled=true; btn.textContent=nfImpHi()?'तैयार हो रहा है…':'Preparing…'; return o; } btn.disabled=false; btn.innerHTML=old; }
+function nfImpOpen(url){ var w=null; try{ w=window.open(url,'_blank','noopener'); }catch(e){} if(!w){ try{ (window.top||window).location.href=url; }catch(e){ location.href=url; } } }
 async function nfImpShare(btn){
-  var rec=_nfImp.rec; if(!rec) return; var old=btn&&btn.innerHTML; if(btn){ btn.disabled=true; btn.textContent='…'; }
-  try{ var b=await nfImpBlob(rec), text=nfImpText(rec);
-    if(b&&navigator.canShare){ var file=new File([b],'nqas-impact.jpg',{type:'image/jpeg'}); if(navigator.canShare({files:[file]})){ await navigator.share({files:[file],text:text}); return; } }
-    if(b) nfImpDownload(b); window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener');
-  }catch(e){ if(!(e&&e.name==='AbortError')) showToast(nfImpHi()?'साझा नहीं हो सका।':'Could not share.','err'); }
-  finally{ if(btn){ btn.disabled=false; btn.innerHTML=old; } }
-}
-function nfImpDownload(b){ var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='nqas-impact.jpg'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500); }
-async function nfImpSave(btn){ var rec=_nfImp.rec; if(!rec) return; var b=await nfImpBlob(rec); if(b) nfImpDownload(b); else showToast('Could not make the picture.','err'); }
+  var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
+  try{ var url=await nfImpPublish(rec), text=nfImpText(rec,url||null);
+    try{ if(navigator.canShare&&!nfImpEmbedded()){ var b=await nfImpBlob(rec); if(b){ var file=new File([b],'nqas-fast-card.jpg',{type:'image/jpeg'}); if(navigator.canShare({files:[file]})){ await navigator.share({files:[file],text:text}); return; } } } }catch(e){ if(e&&e.name==='AbortError') return; }
+    nfImpOpen('https://wa.me/?text='+encodeURIComponent(text));
+  }catch(e){ showToast(nfImpHi()?'साझा नहीं हो सका।':'Could not share.','err'); }
+  finally{ nfImpBusy(btn,false,old); } }
+async function nfImpLinkedIn(btn){ var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
+  try{ var url=await nfImpPublish(rec); if(!url){ showToast(nfImpHi()?'कार्ड तैयार नहीं हो सका।':'Could not prepare the card.','err'); return; }
+    nfImpCopy(nfImpCaption(rec,false)); showToast(nfImpHi()?'कैप्शन कॉपी हो गया — LinkedIn में पेस्ट करें।':'Caption copied — paste it in LinkedIn.','ok');
+    nfImpOpen('https://www.linkedin.com/sharing/share-offsite/?url='+encodeURIComponent(url)); }
+  finally{ nfImpBusy(btn,false,old); } }
+async function nfImpInstagram(btn){ var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
+  try{ var url=await nfImpPublish(rec); if(!url){ showToast(nfImpHi()?'कार्ड तैयार नहीं हो सका।':'Could not prepare the card.','err'); return; }
+    nfImpCopy(nfImpCaption(rec,true)); showToast(nfImpHi()?'कैप्शन कॉपी हो गया। खुले पेज पर "तस्वीर साझा करें" दबाएँ और Instagram चुनें।':'Caption copied. On the page that opens, tap "Share picture" and choose Instagram.','ok');
+    nfImpOpen(nfImpCardUrl(rec,'&ig=1')); }
+  finally{ nfImpBusy(btn,false,old); } }
+function nfImpEmbedded(){ try{ return window.self!==window.top; }catch(e){ return true; } }
+async function nfImpSave(btn){ var rec=_nfImp.rec; if(!rec) return; var old=nfImpBusy(btn,true);
+  try{ var touch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+    if(!touch&&!nfImpEmbedded()){ var b=await nfImpBlob(rec); if(b){ nfImpDownload(b); return; } }
+    var url=await nfImpPublish(rec); if(url){ nfImpOpen(url+'&img=1&dl=1'); return; }
+    var b2=await nfImpBlob(rec); if(b2) nfImpDownload(b2); else showToast('Could not make the picture.','err'); }
+  finally{ nfImpBusy(btn,false,old); } }
+function nfImpDownload(b){ var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='nqas-fast-card.jpg'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1500); }
+function nfImpBtnsHTML(rec){ var hi=nfImpHi();
+  return '<div class="nfi-btns"><button type="button" class="wa" onclick="nfImpShare(this)">WhatsApp</button>'
+    +(nfImpTitled(rec)?'<button type="button" class="li" onclick="nfImpLinkedIn(this)">LinkedIn</button>':'<button type="button" class="ig" onclick="nfImpInstagram(this)">Instagram</button>')
+    +'<button type="button" class="sv" onclick="nfImpSave(this)">'+scEsc(hi?'तस्वीर सहेजें':'Save picture')+'</button></div>'; }
 function nfImpSetName(v){ try{ localStorage.setItem('nfi_name',v); }catch(e){} }
 // ── the "My impact" block ──
 function nfImpCardHTML(rec,who){
@@ -19803,22 +19885,26 @@ function nfImpCardHTML(rec,who){
       :who==='mentor'?(hi?'<b>🧭 क्वालिटी लीडर</b> का खिताब HealSol आपके योगदान और लीडर मानदंडों के आधार पर देता है।':'The <b>🧭 Quality Leader</b> title is given by HealSol, based on your contribution and the Leader criteria.')
       :(hi?'आपका प्रभाव हर रात अपडेट होता है — कल फिर देखें।':'Your impact is updated every night — check again tomorrow.');
     return '<div class="nfi-card" id="nfi-card"><div class="lv">'+scEsc(hi?'मेरा प्रभाव':'MY IMPACT')+'</div><div class="nfi-empty">'+msg+'</div></div>'; }
-  var lv=NF_LEVEL[rec.level]||{}, N=nfImpNums(rec), care=nfImpCare(rec,nfImpVillages(rec)), nm=nfImpNameChoice();
-  var next=rec.stars&&rec.stars<5&&rec.nextAt!=null&&rec.pts!=null?(hi?'अगला ★ '+Math.max(1,rec.nextAt-rec.pts)+' अंक और':'Next ★ in '+Math.max(1,rec.nextAt-rec.pts)+' more points'):'';
-  return '<div class="nfi-card" id="nfi-card"><div class="lv">'+scEsc(hi?'मेरा प्रभाव':'MY IMPACT')+'</div><h3>'+(lv.ic||'')+' '+scEsc(nfImpLv(rec.level))+'</h3>'+nfImpStars(rec.stars)
-    +'<div class="nfi-nums">'+N.map(function(x){ return '<div><b>'+scEsc(String(x[0]))+'</b><small>'+scEsc(x[1])+'</small></div>'; }).join('')+'</div>'
-    +(care?'<div class="nfi-care">'+scEsc(care)+'</div>':'')+(next?'<div class="nfi-next">'+scEsc(next)+'</div>':'')+(nfImpNextHint(rec)?'<div class="nfi-next">'+scEsc(nfImpNextHint(rec))+'</div>':'')
-    +'<div class="nfi-btns"><button type="button" class="wa" onclick="nfImpShare(this)">'+scEsc(hi?'WhatsApp पर साझा करें':'Share on WhatsApp')+'</button><button type="button" class="sv" onclick="nfImpSave(this)">'+scEsc(hi?'तस्वीर सहेजें':'Save picture')+'</button></div>'
-    +'<div class="nfi-name">'+scEsc(hi?'कार्ड पर नाम:':'Name on card:')+' <label><input type="radio" name="nfi-nm" '+(nm!=='first'?'checked':'')+' onchange="nfImpSetName(\'full\')"> '+scEsc(hi?'पूरा नाम':'Full name')+'</label><label><input type="radio" name="nfi-nm" '+(nm==='first'?'checked':'')+' onchange="nfImpSetName(\'first\')"> '+scEsc(hi?'केवल पहला नाम':'First name only')+'</label></div></div>';
+  var lv=NF_LEVEL[rec.level]||{}, nn=nfImpNoNums(rec), N=nn?[]:nfImpNums(rec), care=nn?'':nfImpCare(rec,nfImpVillages(rec)), nm=nfImpNameChoice();
+  var how=nfImpHowRows(rec.level), why=nfImpWhy(rec);
+  var stars=rec.stars||how?(how?'<button type="button" class="nfi-starbtn" onclick="nfImpHow()" aria-label="'+scEsc(hi?'सितारे कैसे मिलते हैं':'How stars work')+'">'+(nfImpStars(rec.stars)||'<span class="nfi-st"><i>★★★★★</i></span>')+'<small>'+scEsc(hi?'कैसे?':'How?')+'</small></button>':nfImpStars(rec.stars)):'';
+  var prog=rec.kind==='champion'&&(rec.progress||[]).length?'<div class="nfi-prog"><b>'+scEsc(hi?'चल रहे कार्यक्रम (80% कार्ड जाँचने हैं)':'Programmes running (check 80% of cards)')+'</b>'+rec.progress.map(function(x){ return scEsc(x.name)+' — '+x.pct+'%'+(x.close?(hi?' · बंद ':' · closes ')+scEsc(scFmtDate(x.close)):''); }).join('<br>')+'</div>':'';
+  var upd='<div class="nfi-upd2">'+scEsc(hi?'हर रात अपडेट होता है · पिछला अपडेट ':'Updated every night · last update ')+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</div>';
+  return '<div class="nfi-card" id="nfi-card"><div class="lv">'+scEsc(hi?'मेरा प्रभाव':'MY IMPACT')+'</div><h3>'+(lv.ic||'')+' '+scEsc(nfImpLv(rec.level))+'</h3>'+stars+(why?'<div class="nfi-why">'+scEsc(why)+'</div>':'')
+    +(nn&&rec.citation?'<div class="nfi-care">“'+scEsc(rec.citation)+'”</div>':'')+(nn?'':'<div class="nfi-nums">'+N.map(function(x){ return '<div><b>'+scEsc(typeof x[0]==='number'?x[0].toLocaleString('en-IN'):String(x[0]))+'</b><small>'+scEsc(x[1])+'</small></div>'; }).join('')+'</div>')
+    +(care?'<div class="nfi-care">'+scEsc(care)+'</div>':'')+prog+(nfImpNextHint(rec)?'<div class="nfi-next">'+scEsc(nfImpNextHint(rec))+'</div>':'')
+    +nfImpBtnsHTML(rec)
+    +'<div class="nfi-name">'+scEsc(hi?'कार्ड पर नाम:':'Name on card:')+' <label><input type="radio" name="nfi-nm" '+(nm!=='first'?'checked':'')+' onchange="nfImpSetName(\'full\')"> '+scEsc(hi?'पूरा नाम':'Full name')+'</label><label><input type="radio" name="nfi-nm" '+(nm==='first'?'checked':'')+' onchange="nfImpSetName(\'first\')"> '+scEsc(hi?'केवल पहला नाम':'First name only')+'</label></div>'+upd+'</div>';
 }
 // level up / new star → one celebration screen (once)
 function nfImpCelebrate(rec){
-  if(!rec||!rec.level) return; var k='nfi_seen_'+rec.key, now=rec.level+':'+(rec.stars||0), seen=''; try{ seen=localStorage.getItem(k)||''; }catch(e){}
+  if(!rec||!rec.level) return; var k='nfi_seen_'+rec.key, full=Math.floor(+rec.stars||0), now=rec.level+':'+full, seen=''; try{ seen=localStorage.getItem(k)||''; }catch(e){}
   if(seen===now) return; try{ localStorage.setItem(k,now); }catch(e){}
-  var hi=nfImpHi(), lv=NF_LEVEL[rec.level]||{}, newLevel=!seen||seen.split(':')[0]!==rec.level;
+  var sp=seen.split(':'), newLevel=!seen||sp[0]!==rec.level; if(!newLevel&&!(full>(+sp[1]||0))) return;   // celebrate only a new level or a new full star
+  var hi=nfImpHi(), lv=NF_LEVEL[rec.level]||{};
   var ov=document.createElement('div'); ov.className='nfi-ov';
   ov.innerHTML='<div><div style="font-size:44px">🎉</div><h2>'+scEsc(newLevel?(hi?'बधाई! अब आप '+nfImpLv(rec.level)+' हैं':'You are now a '+nfImpLv(rec.level)):(hi?'नया सितारा!':'A new star!'))+'</h2>'+nfImpStars(rec.stars)
-    +'<p>'+scEsc(nfImpCare(rec,nfImpVillages(rec))||'')+'</p><div class="nfi-btns"><button type="button" class="wa" onclick="nfImpShare(this)">'+scEsc(hi?'WhatsApp पर साझा करें':'Share on WhatsApp')+'</button><button type="button" class="sv" onclick="this.closest(\'.nfi-ov\').remove()">'+scEsc(hi?'बाद में':'Later')+'</button></div></div>';
+    +(nfImpWhy(rec)?'<p><b>'+scEsc(nfImpWhy(rec))+'</b></p>':'')+'<p>'+scEsc(nfImpNoNums(rec)?'':(nfImpCare(rec,nfImpVillages(rec))||''))+'</p><div class="nfi-btns"><button type="button" class="wa" onclick="nfImpShare(this)">'+scEsc(hi?'WhatsApp पर साझा करें':'Share on WhatsApp')+'</button><button type="button" class="sv" onclick="this.closest(\'.nfi-ov\').remove()">'+scEsc(hi?'बाद में':'Later')+'</button></div></div>';
   ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); }); document.body.appendChild(ov);
 }
 // staff: Me page + stars next to the name on Home
@@ -19860,7 +19946,7 @@ async function nfImpVerifyBoot(){
   pg.className='nfi-vp';
   pg.innerHTML='<div class="nfv-top"><img src="'+SC_BRAND.logoNqas+'" alt="NQAS"><img src="'+SC_BRAND.logoHealsol+'" alt="HealSol Academy"></div>'
     +(rec?'<div class="nfi-v"><div class="nfi-ok"><i class="ti ti-shield-check"></i>Genuine NQAS | FAST impact card</div>'
-      +'<div style="color:#64748B;font-size:12px;font-weight:700;margin-top:10px;">'+scEsc((rec.role||'').toUpperCase())+'</div><h2>'+scEsc(rec.name)+'</h2><div style="font-weight:700;color:#0F766E;font-size:16px;">'+(lv.ic||'')+' '+scEsc(lv.en||'')+'</div>'+nfImpStars(rec.stars)
+      +'<div style="color:#64748B;font-size:12px;font-weight:700;margin-top:10px;">'+scEsc((rec.role||'').toUpperCase())+'</div><h2>'+scEsc(rec.name)+'</h2><div style="font-weight:700;color:#0F766E;font-size:16px;">'+(lv.ic||'')+' '+scEsc(lv.en||'')+'</div>'+nfImpStars(rec.stars)+(nfImpWhy(rec)?'<div style="font-size:12.5px;color:#64748B;margin-top:2px;">'+scEsc(nfImpWhy(rec))+'</div>':'')
       +'<p style="font-size:13.5px;color:#334155;margin:6px 0;">'+scEsc([rec.facility,rec.district,rec.state].filter(Boolean).join(' · '))+(rec.facilities>1?' · '+rec.facilities+' facilities':'')+'</p>'
       +(rec.pop?'<p style="font-size:13.5px;margin:6px 0;"><b>'+scEsc((rec.cert||rec.result==='ready'?'Ensuring':'Working to ensure')+' quality of care for '+Number(rec.pop).toLocaleString('en-IN')+' people')+'</b></p>':'')
       +(rec.citation?'<p class="nfi-cit">🌟 Quality Pioneer'+(rec.pioneerYear?' '+scEsc(rec.pioneerYear):'')+': “'+scEsc(rec.citation)+'”</p>':'')+'<p class="nfi-upd">'+(rec.honorary?'Title given by HealSol Academy':'Worked out by HealSol Academy from verified programme data')+' · updated '+scEsc(scFmtDate(String(rec.updatedAt||'').slice(0,10)))+'</p></div>'
@@ -20074,10 +20160,11 @@ function nfrTitleHTML(T){
       +(D.cit?(p.citation?'<p class="nfr-cit">“'+scEsc(p.citation)+'”</p>':'<p class="nfr-muted">No citation yet.</p>')
         +'<label class="nfr-sw"><input type="checkbox"'+(p.show!==false?' checked':'')+(p.citation?'':' disabled')+' onchange="nfrTitleShow(\''+T+'\',\''+r+'\',this.checked)"><i></i> Show citation on Verify page</label>'
         :(p.note?'<p class="nfr-note"><b>HealSol note:</b> '+scEsc(p.note)+'</p>':''))
+      +(nfrSupFacs(u).length?'<label class="nfr-sw"><input type="checkbox"'+(u.cardNums===true?' checked':'')+' onchange="nfrCardNums(\''+r+'\',this.checked)"><i></i> Show numbers on card <small class="nfr-muted">(facilities mentored, NQAS Ready, average gain)</small></label>':'')
       +'<small class="nfr-muted">Given by '+scEsc(p.by||'HealSol')+(p.at?' on '+scEsc(scFmtDate(String(p.at).slice(0,10))):'')+'</small>'
       +'<div class="nfr-pb"><button type="button" class="nfr-btn ghost sm" onclick="nfrTitleForm(\''+T+'\',\''+r+'\')"><i class="ti ti-pencil"></i> Edit</button>'
       +'<button type="button" class="nfr-btn ghost sm" onclick="nfrPioCard(\''+r+'\')"><i class="ti ti-download"></i> Card</button>'
-      +'<button type="button" class="nfr-btn ghost sm" onclick="nfrPioLink(\''+r+'\')"><i class="ti ti-shield-check"></i> Verify link</button>'
+      +'<button type="button" class="nfr-btn ghost sm" onclick="nfrPioLink(\''+r+'\')"><i class="ti ti-shield-check"></i> Card link</button>'
       +'<button type="button" class="nfr-btn ghost sm del" onclick="nfrTitleRemove(\''+T+'\',\''+r+'\')"><i class="ti ti-x"></i> Remove title</button></div></div>'; }).join('')+'</div>';
   h+='<div class="nfr-row"><button type="button" class="nfr-btn ghost" id="nfr-upd" onclick="nfrUpdateNow()"><i class="ti ti-refresh"></i> Update cards now</button><small class="nfr-muted">Works out all levels and stars again (takes about a minute). Otherwise this happens tonight at 2 AM.</small></div></div>';
   h+='<div class="nfr-card"><h3><i class="ti ti-clock"></i> History</h3>'+(log.length?'<div class="nfr-tw"><table class="nfr-t"><thead><tr><th>Date</th><th>Person</th><th>Action</th><th>Details</th><th>By</th></tr></thead><tbody>'
@@ -20157,6 +20244,8 @@ async function nfrTitleSave(T,editRef){
 function nfrPioSave(r){ return nfrTitleSave('pioneer',r); }
 async function nfrTitleShow(T,ref,on){ var u=nfrPioRec(ref), f=NF_TITLE[T].field; var ok=await fbSet(nfrPioBase(ref)+'/'+f+'/show',!!on); if(ok&&u&&typeof u[f]==='object') u[f].show=!!on;
   showToast(ok?(on?'Citation will show on the Verify page from the next update.':'Citation hidden from the Verify page from the next update.'):'Could not save.',ok?'ok':'err'); }
+async function nfrCardNums(ref,on){ var u=nfrPioRec(ref); var ok=await fbSet(nfrPioBase(ref)+'/cardNums',on?true:null); if(ok&&u){ if(on) u.cardNums=true; else delete u.cardNums; }
+  showToast(ok?(on?'Numbers will show on the card from the next update.':'Numbers hidden on the card from the next update.'):'Could not save.',ok?'ok':'err'); nfrRender(); }
 function nfrPioShow(r,on){ return nfrTitleShow('pioneer',r,on); }
 async function nfrTitleRemove(T,ref){ var D=NF_TITLE[T], u=nfrPioRec(ref); if(!u) return; var hon=ref.slice(0,3)==='hon';
   var after=hon?'Their impact card and Verify link stop working from the next update.'
@@ -20172,8 +20261,9 @@ async function nfrPioImpact(ref){ var r=null; try{ r=await fbGet('sc_impact/'+nf
 async function nfrPioCard(ref){ var r=await nfrPioImpact(ref); if(!r) return; showToast('Making the card…','ok');
   var c=await nfImpCanvas(r); if(!c){ showToast('Could not make the card on this device.','err'); return; }
   var a=document.createElement('a'); a.href=c.toDataURL('image/jpeg',0.9); a.download=String((NF_LEVEL[r.level]||{}).en||'Impact').replace(/\s+/g,'-')+'-'+String(r.name||'card').replace(/[^A-Za-z0-9]+/g,'-')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
-async function nfrPioLink(ref){ var r=await nfrPioImpact(ref); if(!r) return; var url=nfImpVerifyUrl(r);
-  try{ await navigator.clipboard.writeText(url); showToast('Verify link copied: '+url,'ok'); }catch(e){ await scDialog({title:'Verify link',icon:'🔗',okLabel:'Done',message:url,fields:[]}); } }
+async function nfrPioLink(ref){ var r=await nfrPioImpact(ref); if(!r) return; showToast('Preparing the card link…','ok'); var url=null; try{ url=await nfImpPublish(r); }catch(e){} if(!url) url=nfImpVerifyUrl(r);
+  _nfImp.rec=r; nfImpCopy(url);
+  await scDialog({title:'Card link copied',icon:'🔗',okLabel:'Done',message:'Paste it in WhatsApp or LinkedIn — it shows the card picture. On LinkedIn, Copy caption: "'+nfImpCaption(r,false)+'"\n\n'+url,fields:[]}); }
 async function nfrUpdateNow(){ var b=document.getElementById('nfr-upd'); if(b){ b.disabled=true; b.innerHTML='<i class="ti ti-loader"></i> Updating…'; }
   try{ var r=await nfCall('refreshSummary',{all:true}); showToast('Cards updated for '+((r&&r.impact)||0)+' people.','ok'); }catch(e){ showToast(e.message||'Could not update.','err'); }
   if(b){ b.disabled=false; b.innerHTML='<i class="ti ti-refresh"></i> Update cards now'; } }
@@ -20189,14 +20279,27 @@ async function nfrUpdateNow(){ var b=document.getElementById('nfr-upd'); if(b){ 
 })();
 // the nightly summary carries each person's contribution (used by functions/impact.js)
 (function(){ var oS=nfSumFacility; nfSumFacility=function(st){ var s=oS.apply(this,arguments);
-  try{ var P=st.progress||{}, S=st.staff||{}, pid=st.progId, present=scRolesFromRoster(S), A=st.agg, comp=nfgComp(st), imp={staff:{},rev:{}};
-    (A.staff||[]).forEach(function(x){ if(!x.inRoster) return; var m=x.mob, any=false, bl=true;
-      for(var di=0;di<7;di++){ var d=scDayDef(pid,di); if(!d||!(d.cps||[]).some(function(cp){ return scCpForRoleIn(cp,x.role,present); })) continue; any=true; if(!(((P[m]||{})['day_'+di])||{}).taskDone) bl=false; }
-      var fixed=0, L=(x.res&&x.res.latest)||{}; Object.keys(L).forEach(function(id){ var o=L[id]; if(o&&o.base!=null&&o.base<2&&o.score===2) fixed++; });
-      var pc=comp.people.find(function(q){ return q.mob===m; })||{}; imp.staff[m]={baseline:any&&bl,onTime:pc.on||0,fixed:fixed,name:x.name}; });
-    var R=function(id){ return imp.rev[id]=imp.rev[id]||{cards:0,n:0,ch:0}; };
-    Object.keys(P).forEach(function(m){ Object.keys(P[m]||{}).forEach(function(k){ var r=P[m][k]||{}; if(r.verified&&r.verifiedByMob&&/^[A-Za-z0-9_-]+$/.test(r.verifiedByMob)){ var q=R(r.verifiedByMob); q.cards++; var t=String(r.verifiedAt||''); if(t>(q.last||'')) q.last=t; }
-      Object.keys(r.blRev||{}).forEach(function(ck){ Object.keys(r.blRev[ck]||{}).forEach(function(kk){ var e=r.blRev[ck][kk]; if(!e||!e.byId||!/^[A-Za-z0-9_-]+$/.test(e.byId)) return; var x=R(e.byId); x.n++; if(e.r&&e.r!=='ok') x.ch++; var t2=String(e.at||''); if(t2>(x.last||'')) x.last=t2; }); }); }); });
+  try{ var P=st.progress||{}, S=st.staff||{}, pid=st.progId, present=scRolesFromRoster(S), A=st.agg, comp=nfgComp(st), imp={staff:{},rev:{}}, f=st.fac||{}, D=nfgDates(f);
+    var roleDay=function(role,di){ var d=scDayDef(pid,di); return !!(d&&(d.cps||[]).some(function(cp){ return scCpForRoleIn(cp,role,present); })); };
+    var onTime=function(r,di){ var w=r.doneAt||r.updatedAt; return !!(r.taskDone&&D&&w&&nfLocalISO(w)<=nfgAdd(D.start,di)); };
+    // programme window (Day 1 → close date, or the end of a catch-up) — Champion checks after it do not count
+    var cu=f.catchup||{}, wEnd=D?D.close:null; if(cu.on&&cu.end&&(!wEnd||cu.end>wEnd)) wEnd=cu.end;
+    var today=scTodayStr(); imp.wEnd=wEnd||null; imp.closed=!!(wEnd&&today>wEnd)||!!(s.grad&&!(cu.on&&cu.end&&today<=cu.end));
+    (A.staff||[]).forEach(function(x){ if(!x.inRoster) return; var m=x.mob, any=false, bl=true, started=false, iT=0, iO=0, eT=0, eD=0, PM=P[m]||{};
+      for(var di=0;di<7;di++){ if(!roleDay(x.role,di)) continue; any=true; var r0=PM['day_'+di]||{}; if(r0.taskDone) started=true; else bl=false; }
+      for(var dj=7;dj<=48;dj++){ if(!roleDay(x.role,dj)) continue; iT++; if(onTime(PM['day_'+dj]||{},dj)) iO++; }
+      for(var dk=49;dk<=55;dk++){ if(!roleDay(x.role,dk)) continue; eT++; if((PM['day_'+dk]||{}).taskDone) eD++; }
+      var fixed=0, gaps=0, L=(x.res&&x.res.latest)||{}; Object.keys(L).forEach(function(id){ var o=L[id]; if(o&&o.base!=null&&o.base<2){ gaps++; if(o.score===2) fixed++; } });
+      var pc=comp.people.find(function(q){ return q.mob===m; })||{};
+      imp.staff[m]={baseline:any&&bl,started:started,onTime:pc.on||0,fixed:fixed,gaps:gaps,implOn:iO,implTot:iT,endDone:eD,endTot:eT,name:x.name}; });
+    // Champion help: unique cards checked inside the window, out of the cards the staff completed (Days 1–56)
+    var R=function(id){ return imp.rev[id]=imp.rev[id]||{cards:0,n:0,ch:0,chk:0}; }, done=0, ok=function(id){ return /^[A-Za-z0-9_-]+$/.test(id||''); }, inWin=function(t){ return !wEnd||!t||nfLocalISO(t)<=wEnd; };
+    Object.keys(P).forEach(function(m){ Object.keys(P[m]||{}).forEach(function(k){ var r=P[m][k]||{}, di=+String(k).replace('day_',''); var by={};
+      if(r.taskDone&&di>=0&&di<=55) done++;
+      if(r.verified&&ok(r.verifiedByMob)){ var q=R(r.verifiedByMob); q.cards++; var t=String(r.verifiedAt||''); if(t>(q.last||'')) q.last=t; if(inWin(t)) by[r.verifiedByMob]=1; }
+      Object.keys(r.blRev||{}).forEach(function(ck){ Object.keys(r.blRev[ck]||{}).forEach(function(kk){ var e=r.blRev[ck][kk]; if(!e||!ok(e.byId)) return; var x=R(e.byId); x.n++; if(e.r&&e.r!=='ok') x.ch++; var t2=String(e.at||''); if(t2>(x.last||'')) x.last=t2; if(inWin(t2)) by[e.byId]=1; }); });
+      if(r.taskDone&&di>=0&&di<=55) Object.keys(by).forEach(function(id){ R(id).chk++; }); }); });
+    imp.done=done;
     s.imp=scClean(imp);
   }catch(e){ console.warn('[SC] impact in summary',e); }
   return s; }; })();
