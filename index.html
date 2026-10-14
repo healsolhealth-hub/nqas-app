@@ -1154,6 +1154,12 @@ textarea.scx-in{resize:vertical;min-height:70px;}
 #scx-adm-vq-badge{top:-7px;right:-7px;}
 </style>
 
+<style id="nf-boot-css">
+/* Hide the old staff-login panel from the very first paint; the new NQAS | FAST login replaces it (nf-on). Safety net: show it after 6 s if the new login never mounts. */
+#login-screen:not(.nf-on){background:#EEF3F2;}
+#login-screen:not(.nf-on) > *{visibility:hidden;animation:nfBootShow 0s 6s forwards;}
+@keyframes nfBootShow{to{visibility:visible;}}
+</style>
 </head>
 <body>
 
@@ -13397,7 +13403,8 @@ async function nfPick(i){
   var oLang=setLang; setLang=function(){ var r=oLang.apply(this,arguments); try{ nfPaint(); }catch(e){} return r; };
   // after any logout the login form is clean again
   var oShow=scShowLoginPanel; scShowLoginPanel=function(){ var r=oShow.apply(this,arguments); try{ nfBack(); var p=document.getElementById('nf-pwd'); if(p) p.value=''; nfError(''); }catch(e){} return r; };
-  if(document.readyState!=='loading') nfMount(); else document.addEventListener('DOMContentLoaded',nfMount);
+  try{ nfMount(); }catch(e){ console.warn('[SC] early login mount',e); }   // the login box is already on the page: show the new login straight away
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',nfMount);
   // HealSol: facilities whose CHO has no login yet
   if(typeof scRvAttention==='function'){
     var oAtt=scRvAttention;
